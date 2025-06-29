@@ -1,3 +1,5 @@
+
+import 'dotenv/config';
 import {
   APIGatewayProxyEvent,
   APIGatewayProxyHandler,
@@ -5,7 +7,7 @@ import {
 } from "aws-lambda";
 
 import { saveDynamoDBAppointment } from "../infrastructure/dynamodb/AppointmentRepository";
-import { publishAppointment } from "../infrastructure/sns/NotificationPublisher";
+import { publishSNSAppointment } from "../infrastructure/sns/NotificationPublisher";
 import { hasRequiredFields, isValidCountryISO } from "../utils/validation";
 import { createResponse } from "../utils/response";
 import { ERROR, MESSAGES } from "../utils/constants";
@@ -45,7 +47,7 @@ export const appointmentHandler: APIGatewayProxyHandler = async (event) => {
 
     const appointment = createAppointment(body);
     await saveDynamoDBAppointment(appointment);
-    await publishAppointment(appointment);
+    await publishSNSAppointment(appointment);
 
     return createResponse(202, {
       message: MESSAGES.APPOINTMENT_SCHEDULED,

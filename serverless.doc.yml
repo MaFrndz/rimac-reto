@@ -1,0 +1,54 @@
+endpoint:
+  appointmentPost:
+    summary: Crear una cita médica
+    description: Registra una cita en DynamoDB y publica un evento SNS.
+    requestBody:
+      description: Datos del agendamiento
+      required: true
+    requestModels:
+      "application/json": CreateAppointmentRequest
+    methodResponses:
+      - statusCode: 202
+        responseBody:
+          description: Cita registrada correctamente
+        responseModels:
+          "application/json": AppointmentCreatedResponse
+      - statusCode: 400
+        responseBody:
+          description: Error en los datos de entrada
+        responseModels:
+          "application/json": ErrorResponse400Create
+      - statusCode: 422
+        responseBody:
+          description: Error en los datos de entrada
+        responseModels:
+          "application/json": ErrorResponse422Country
+      - statusCode: 500
+        responseBody:
+          description: Error interno del servidor
+        responseModels:
+          "application/json": ErrorResponse500
+  appointmentGet:
+    summary: Consultar citas de un asegurado
+    description: Devuelve todas las citas registradas de un asegurado dado.
+    queryParams:
+      - name: insuredId
+        description: ID del asegurado
+        required: true
+        type: string
+    methodResponses:
+      - statusCode: 200
+        responseBody:
+          description: Lista de citas encontradas
+        responseModels:
+          "application/json": AppointmentList
+      - statusCode: 400
+        responseBody:
+          description: Parámetro insuredId faltante
+        responseModels:
+          "application/json": ErrorResponse400GetIn
+      - statusCode: 500
+        responseBody:
+          description: Error interno del servidor
+        responseModels:
+          "application/json": ErrorResponse500
