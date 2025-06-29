@@ -4,7 +4,7 @@ import {
   APIGatewayProxyResult,
 } from "aws-lambda";
 
-import { saveAppointment } from "../infrastructure/dynamodb/AppointmentRepository";
+import { saveDynamoDBAppointment } from "../infrastructure/dynamodb/AppointmentRepository";
 import { publishAppointment } from "../infrastructure/sns/NotificationPublisher";
 import { hasRequiredFields, isValidCountryISO } from "../utils/validation";
 import { createResponse } from "../utils/response";
@@ -44,7 +44,7 @@ export const appointmentHandler: APIGatewayProxyHandler = async (event) => {
     }
 
     const appointment = createAppointment(body);
-    await saveAppointment(appointment);
+    await saveDynamoDBAppointment(appointment);
     await publishAppointment(appointment);
 
     return createResponse(202, {
