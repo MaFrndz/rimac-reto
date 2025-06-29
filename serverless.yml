@@ -8,6 +8,22 @@ provider:
   region: us-east-1
 
 functions:
+  sqsPEHandler:
+    handler: dist/handlers/sqsHandlers.sqsPEHandler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - SQSPE
+              - Arn
+  sqsCLHandler:
+    handler: dist/handlers/sqsHandlers.sqsCLHandler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - SQSCL
+              - Arn
   hello:
     handler: handler.hello
     events:
@@ -42,3 +58,35 @@ resources:
           - AttributeName: id
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
+    SQSPE:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: SQS_PE
+    SQSCL:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: SQS_CL
+    SQSPESubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        TopicArn: arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS
+        Protocol: sqs
+        Endpoint:
+          Fn::GetAtt:
+            - SQSPE
+            - Arn
+        FilterPolicy:
+          countryISO:
+            - "PE"
+    SQSCLSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        TopicArn: arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS
+        Protocol: sqs
+        Endpoint:
+          Fn::GetAtt:
+            - SQSCL
+            - Arn
+        FilterPolicy:
+          countryISO:
+            - "CL"
