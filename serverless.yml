@@ -15,13 +15,13 @@ functions:
           path: hello
           method: get
   appointment:
-    handler: src/handlers/appointment.appointmentHandler
+    handler: dist/handlers/appointment.appointmentHandler
     events:
       - http:
           path: appointments
           method: post
   swagger:
-    handler: src/handlers/swagger.swaggerHandler
+    handler: dist/handlers/swagger.swaggerHandler
     events:
       - http:
           path: swagger
