@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AppointmentRequest",
+  "type": "object",
+  "properties": {
+    "insuredId": { "type": "string" },
+    "countryISO": { "type": "string", "enum": ["PE", "CL"] },
+    "schedule": {
+      "type": "object",
+      "properties": {
+        "scheduleId": { "type": "number" },
+        "centerId": { "type": "number" },
+        "specialtyId": { "type": "number" },
+        "medicId": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["scheduleId", "centerId", "specialtyId", "medicId", "date"]
+    }
+  },
+  "required": ["insuredId", "countryISO", "schedule"]
+}

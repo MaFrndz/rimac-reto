@@ -1,0 +1,97 @@
+openapi: 3.0.1
+info:
+  title: Appointment API
+  version: 1.0.0
+  description: API para agendar citas médicas
+paths:
+  /appointments:
+    post:
+      summary: Crear una cita médica
+      description: Registra una cita en DynamoDB y publica un evento SNS.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAppointmentRequest'
+      responses:
+        '202':
+          description: Cita registrada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentCreatedResponse'
+        '400':
+          description: Error en los datos de entrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400Create'
+        '422':
+          description: Error en los datos de entrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse422Country'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+components:
+  schemas:
+    CreateAppointmentRequest:
+      type: object
+      properties:
+        insuredId:
+          type: string
+        countryISO:
+          type: string
+          enum: [PE, CL]
+        schedule:
+          $ref: '#/components/schemas/Schedule'
+      required: [insuredId, countryISO, schedule]
+    Schedule:
+      type: object
+      properties:
+        scheduleId:
+          type: number
+        centerId:
+          type: number
+        specialtyId:
+          type: number
+        medicId:
+          type: number
+        date:
+          type: string
+          format: date-time
+      required: [scheduleId, centerId, specialtyId, medicId, date]
+    AppointmentCreatedResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        appointmentId:
+          type: string
+    ErrorResponse400Create:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+    ErrorResponse422Country:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+    ErrorResponse500:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string

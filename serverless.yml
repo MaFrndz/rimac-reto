@@ -2,9 +2,6 @@ service: appointment-backend
 
 frameworkVersion: '3'
 
-plugins:
-  - serverless-offline
-
 provider:
   name: aws
   runtime: nodejs18.x
@@ -17,3 +14,18 @@ functions:
       - http:
           path: hello
           method: get
+  appointment:
+    handler: src/handlers/appointment.appointmentHandler
+    events:
+      - http:
+          path: appointments
+          method: post
+  swagger:
+    handler: src/handlers/swagger.swaggerHandler
+    events:
+      - http:
+          path: swagger
+          method: get
+
+plugins:
+  - serverless-offline
