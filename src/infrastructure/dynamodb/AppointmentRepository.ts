@@ -58,6 +58,6 @@ export async function getDynamoAppointmentsByInsuredId(
       },
     })
   );
-
+    console.log("Step 2: Query result from DynamoDB", result);
   return result.Items?.map((item) => unmarshall(item) as AppointmentRequest) ?? [];
 }

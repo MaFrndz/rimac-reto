@@ -105,7 +105,7 @@ const handleGetAppointments = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   const insuredId = event.queryStringParameters?.insuredId;
-
+  console.log("Step 1: Received GET request to list appointments for insuredId:", insuredId);
   if (!insuredId) {
     return createResponse(400, {
       error: MESSAGES.MISSING_REQUIRED_FIELDS,

@@ -36,7 +36,12 @@ provider:
             - "dynamodb:Query"
             - "dynamodb:PutItem"
             - "dynamodb:UpdateItem"
-          Resource: !GetAtt AppointmentsTable.Arn
+          Resource:
+            - !GetAtt AppointmentsTable.Arn
+            - Fn::Join:
+                - ""
+                - - !GetAtt AppointmentsTable.Arn
+                  - "/index/insuredId-index"
         - Effect: "Allow"
           Action:
             - "sns:Publish"
