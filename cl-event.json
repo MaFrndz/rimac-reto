@@ -1,0 +1,20 @@
+{
+  "Records": [
+    {
+      "messageId": "19dd0b57-b21e-4ac1-bd88-01bbb068cb78",
+      "receiptHandle": "MessageReceiptHandle",
+      "body": "{\"Type\":\"Notification\",\"MessageId\":\"4a6f6e5c-0f3c-5a9f-9d5a-4e4e4e4e4e4e\",\"TopicArn\":\"arn:aws:sns:us-east-1:123456789012:AppointmentsTopic\",\"Message\":\"{\\\"id\\\":\\\"d1e9b8f0-9b1a-4e6f-a2a4-8b6b1e2c9d0f\\\",\\\"insuredId\\\":\\\"00456\\\",\\\"countryISO\\\":\\\"CL\\\",\\\"status\\\":\\\"PENDING\\\",\\\"createdAt\\\":\\\"2025-06-30T19:10:00.000Z\\\",\\\"schedule\\\":{\\\"scheduleId\\\":200,\\\"centerId\\\":5,\\\"specialtyId\\\":6,\\\"medicId\\\":7,\\\"date\\\":\\\"2024-10-15\\\"}}\",\"Timestamp\":\"2025-06-30T19:10:00.000Z\",\"SignatureVersion\":\"1\",\"Signature\":\"EXAMPLEpH+..=\",\"SigningCertURL\":\"https://sns.us-east-1.amazonaws.com/SimpleNotificationService-433026a4050d206028891664da859041.pem\",\"UnsubscribeURL\":\"https://sns.us-east-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:us-east-1:123456789012:AppointmentsTopic:123456-7890-1234-5678-901234567890\"}",
+      "attributes": {
+        "ApproximateReceiveCount": "1",
+        "SentTimestamp": "1523232000000",
+        "SenderId": "123456789012",
+        "ApproximateFirstReceiveTimestamp": "1523232000001"
+      },
+      "messageAttributes": {},
+      "md5OfBody": "7b270e59b475a0e4e22a73f8046de5f3",
+      "eventSource": "aws:sqs",
+      "eventSourceARN": "arn:aws:sqs:us-east-1:123456789012:AppointmentQueueCL",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

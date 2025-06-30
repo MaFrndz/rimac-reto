@@ -44,9 +44,8 @@ export async function saveAppointmentRDS(
   const sql = `INSERT INTO appointments (id, insured_id, schedule_id, center_id, specialty_id, medic_id, appointment_date, country_iso, status, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-               console.log("SQL Query:", appointment);
   const values = [
-    appointment.id,
+    appointment.id || `${appointment.insuredId}-${new Date().getTime()}`,
     appointment.insuredId,
     appointment.schedule.scheduleId,
     appointment.schedule.centerId,
