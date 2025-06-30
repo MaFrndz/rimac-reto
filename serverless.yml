@@ -8,6 +8,41 @@ provider:
   region: us-east-1
 
 functions:
+  appointment_pe:
+    handler: dist/handlers/appointmentCountry.appointment_pe
+    environment:
+      MYSQL_HOST: mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: Password123
+      MYSQL_DB: mysql-pe
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - SQSPE
+              - Arn
+
+  appointment_cl:
+    handler: dist/handlers/appointmentCountry.appointment_cl
+    environment:
+      MYSQL_HOST: mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: Password123
+      MYSQL_DB: mysql-cl
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - SQSCL
+              - Arn
+  updateAppointmentStatus:
+    handler: dist/handlers/updateAppointmentStatus.updateAppointmentStatus
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - ConformidadQueue
+              - Arn
   sqsPEHandler:
     handler: dist/handlers/sqsHandlers.sqsPEHandler
     events:
@@ -44,6 +79,7 @@ functions:
           method: get
 
 plugins:
+  - serverless-dotenv-plugin
   - serverless-offline
 resources:
   Resources:
@@ -58,6 +94,21 @@ resources:
           - AttributeName: id
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
+    ConformidadQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: SQS_Conformidad
+    EventBridgeToSQSRule:
+      Type: AWS::Events::Rule
+      Properties:
+        EventPattern:
+          source:
+            - "appointment"
+          detail-type:
+            - "AppointmentCompleted"
+        Targets:
+          - Arn: !GetAtt ConformidadQueue.Arn
+            Id: "TargetSQS"
     SQSPE:
       Type: AWS::SQS::Queue
       Properties:
