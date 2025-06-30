@@ -7,6 +7,10 @@ plugins:
   - serverless-offline
 
 custom:
+  isOffline: ${opt:offline, self:provider.stage, ''}
+  serverless-offline:
+    host: 0.0.0.0
+    httpPort: 3000
   env: ${file(env.js)}
 
 provider:
@@ -23,6 +27,7 @@ provider:
     RDS_PASSWORD: ${self:custom.env.db.password}
     RDS_DATABASE_PE: ${self:custom.env.db.pe_db}
     RDS_DATABASE_CL: ${self:custom.env.db.cl_db}
+    IS_OFFLINE: ${self:custom.isOffline}
   iam:
     role:
       statements:

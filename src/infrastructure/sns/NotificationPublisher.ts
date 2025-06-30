@@ -1,11 +1,12 @@
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
+import { AppointmentRequest } from "../../domain/models/types";
 
 const sns = new SNSClient({});
-const TOPIC_ARN =  process.env.SNS_TOPIC_ARN!; // Debes definir esta variable en AWS
+const TOPIC_ARN = process.env.SNS_TOPIC_ARN!; // Debes definir esta variable en AWS
 
-export async function publishSNSAppointment(appointment: any) {
+export async function publishSNSAppointment(appointment: AppointmentRequest) {
   if (!TOPIC_ARN) {
-    console.warn("TOPIC no está definido", TOPIC_ARN);
+    console.warn("SNS_TOPIC_ARN environment variable not set.");
     return false;
   }
   const params = {
