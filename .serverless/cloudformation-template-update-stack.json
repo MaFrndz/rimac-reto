@@ -266,7 +266,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/appointment-backend/dev/1751289661816-2025-06-30T13:21:01.816Z/appointment-backend.zip"
+          "S3Key": "serverless/appointment-backend/dev/1751292303301-2025-06-30T14:05:03.301Z/appointment-backend.zip"
         },
         "Handler": "dist/handlers/appointment.appointmentHandler",
         "Runtime": "nodejs18.x",
@@ -311,7 +311,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/appointment-backend/dev/1751289661816-2025-06-30T13:21:01.816Z/appointment-backend.zip"
+          "S3Key": "serverless/appointment-backend/dev/1751292303301-2025-06-30T14:05:03.301Z/appointment-backend.zip"
         },
         "Handler": "dist/handlers/appointment_pe.handler",
         "Runtime": "nodejs18.x",
@@ -356,7 +356,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/appointment-backend/dev/1751289661816-2025-06-30T13:21:01.816Z/appointment-backend.zip"
+          "S3Key": "serverless/appointment-backend/dev/1751292303301-2025-06-30T14:05:03.301Z/appointment-backend.zip"
         },
         "Handler": "dist/handlers/appointment_cl.handler",
         "Runtime": "nodejs18.x",
@@ -401,7 +401,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/appointment-backend/dev/1751289661816-2025-06-30T13:21:01.816Z/appointment-backend.zip"
+          "S3Key": "serverless/appointment-backend/dev/1751292303301-2025-06-30T14:05:03.301Z/appointment-backend.zip"
         },
         "Handler": "dist/handlers/appointment_confirmation.processCompletionFromSQS",
         "Runtime": "nodejs18.x",
@@ -439,44 +439,44 @@
         "AppointmentUnderscoreconfirmationLogGroup"
       ]
     },
-    "AppointmentLambdaVersionOcsf6NO1yhkjOnvJMNhMcITYVGtRzduEwC899eYvA": {
+    "AppointmentLambdaVersionm9j3RMKqVDgkdW8WfJ8ZA2A0QgliBrfFX6N5L9Khc": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "AppointmentLambdaFunction"
         },
-        "CodeSha256": "Z754xPZfXAO7esxJgqLzFl496OdD5yAWWXmk35nfUx4="
+        "CodeSha256": "lJkCx1UYgnLQ+c1tOyubaRVPQ3gmiam1Eis0DwQisvM="
       }
     },
-    "AppointmentUnderscorepeLambdaVersion0B2VFFMsdsS2f6uZixYdmtoE0QBMTJdJoD5I9WFVw": {
+    "AppointmentUnderscorepeLambdaVersionG4qtQ9aBK3pQvx1Fg8ZbvIFfS2oVFBMcH9sn3pKm4": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "AppointmentUnderscorepeLambdaFunction"
         },
-        "CodeSha256": "Z754xPZfXAO7esxJgqLzFl496OdD5yAWWXmk35nfUx4="
+        "CodeSha256": "lJkCx1UYgnLQ+c1tOyubaRVPQ3gmiam1Eis0DwQisvM="
       }
     },
-    "AppointmentUnderscoreclLambdaVersionQXOlzeGvcmBw22JL0K2dInwFGZf0VYrlMepBVLfR80": {
+    "AppointmentUnderscoreclLambdaVersionu1JzC07v9ZYW2RyB0jR4tfsuHPiSZQM8RaK9OgiBpE": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "AppointmentUnderscoreclLambdaFunction"
         },
-        "CodeSha256": "Z754xPZfXAO7esxJgqLzFl496OdD5yAWWXmk35nfUx4="
+        "CodeSha256": "lJkCx1UYgnLQ+c1tOyubaRVPQ3gmiam1Eis0DwQisvM="
       }
     },
-    "AppointmentUnderscoreconfirmationLambdaVersionjuIUW4tkXKLtfH66L5zTgi62yRFuaWrrQRT9T1Mmp4": {
+    "AppointmentUnderscoreconfirmationLambdaVersionhtSLQBihwNYA6rXFqs2OXqJ8TM0nLXjpP1SQXFSkT0": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "AppointmentUnderscoreconfirmationLambdaFunction"
         },
-        "CodeSha256": "Z754xPZfXAO7esxJgqLzFl496OdD5yAWWXmk35nfUx4="
+        "CodeSha256": "lJkCx1UYgnLQ+c1tOyubaRVPQ3gmiam1Eis0DwQisvM="
       }
     },
     "ApiGatewayRestApi": {
@@ -643,7 +643,7 @@
         "AppointmentLambdaPermissionApiGateway"
       ]
     },
-    "ApiGatewayDeployment1751289649153": {
+    "ApiGatewayDeployment1751292269385": {
       "Type": "AWS::ApiGateway::Deployment",
       "Properties": {
         "RestApiId": {
@@ -985,7 +985,7 @@
     "AppointmentLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "AppointmentLambdaVersionOcsf6NO1yhkjOnvJMNhMcITYVGtRzduEwC899eYvA"
+        "Ref": "AppointmentLambdaVersionm9j3RMKqVDgkdW8WfJ8ZA2A0QgliBrfFX6N5L9Khc"
       },
       "Export": {
         "Name": "sls-appointment-backend-dev-AppointmentLambdaFunctionQualifiedArn"
@@ -994,7 +994,7 @@
     "AppointmentUnderscorepeLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "AppointmentUnderscorepeLambdaVersion0B2VFFMsdsS2f6uZixYdmtoE0QBMTJdJoD5I9WFVw"
+        "Ref": "AppointmentUnderscorepeLambdaVersionG4qtQ9aBK3pQvx1Fg8ZbvIFfS2oVFBMcH9sn3pKm4"
       },
       "Export": {
         "Name": "sls-appointment-backend-dev-AppointmentUnderscorepeLambdaFunctionQualifiedArn"
@@ -1003,7 +1003,7 @@
     "AppointmentUnderscoreclLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "AppointmentUnderscoreclLambdaVersionQXOlzeGvcmBw22JL0K2dInwFGZf0VYrlMepBVLfR80"
+        "Ref": "AppointmentUnderscoreclLambdaVersionu1JzC07v9ZYW2RyB0jR4tfsuHPiSZQM8RaK9OgiBpE"
       },
       "Export": {
         "Name": "sls-appointment-backend-dev-AppointmentUnderscoreclLambdaFunctionQualifiedArn"
@@ -1012,7 +1012,7 @@
     "AppointmentUnderscoreconfirmationLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "AppointmentUnderscoreconfirmationLambdaVersionjuIUW4tkXKLtfH66L5zTgi62yRFuaWrrQRT9T1Mmp4"
+        "Ref": "AppointmentUnderscoreconfirmationLambdaVersionhtSLQBihwNYA6rXFqs2OXqJ8TM0nLXjpP1SQXFSkT0"
       },
       "Export": {
         "Name": "sls-appointment-backend-dev-AppointmentUnderscoreconfirmationLambdaFunctionQualifiedArn"
