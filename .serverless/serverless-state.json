@@ -8,16 +8,89 @@
       "name": "aws",
       "runtime": "nodejs18.x",
       "region": "us-east-1",
-      "stage": "dev",
-      "versionFunctions": true,
       "environment": {
         "SNS_TOPIC_ARN": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
+        "EVENT_BUS_NAME": "default",
+        "DYNAMODB_TABLE": {
+          "Ref": "AppointmentsTable"
+        },
+        "RDS_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
+        "RDS_USER": "admin",
+        "RDS_PASSWORD": "Password123",
+        "RDS_DATABASE_PE": "mysql-pe",
+        "RDS_DATABASE_CL": "mysql-cl",
         "MYSQL_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
         "MYSQL_USER": "admin",
         "MYSQL_PASSWORD": "Password123",
         "MYSQL_CL": "mysql-cl",
         "MYSQL_PE": "mysql-pe"
       },
+      "iam": {
+        "role": {
+          "statements": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:Query",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem"
+              ],
+              "Resource": {
+                "Fn::GetAtt": [
+                  "AppointmentsTable",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "sns:Publish"
+              ],
+              "Resource": {
+                "Ref": "AppointmentsSNSTopic"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "events:PutEvents"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "sqs:ReceiveMessage",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes"
+              ],
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "AppointmentQueuePE",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::GetAtt": [
+                    "AppointmentQueueCL",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::GetAtt": [
+                    "AppointmentConfirmationQueue",
+                    "Arn"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "stage": "dev",
+      "versionFunctions": true,
       "compiledCloudFormationTemplate": {
         "AWSTemplateFormatVersion": "2010-09-09",
         "Description": "The AWS CloudFormation template for this Serverless application",
@@ -91,6 +164,12 @@
               }
             }
           },
+          "AppointmentLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/appointment-backend-dev-appointment"
+            }
+          },
           "AppointmentUnderscorepeLogGroup": {
             "Type": "AWS::Logs::LogGroup",
             "Properties": {
@@ -107,36 +186,6 @@
             "Type": "AWS::Logs::LogGroup",
             "Properties": {
               "LogGroupName": "/aws/lambda/appointment-backend-dev-updateAppointmentStatus"
-            }
-          },
-          "SqsPEHandlerLogGroup": {
-            "Type": "AWS::Logs::LogGroup",
-            "Properties": {
-              "LogGroupName": "/aws/lambda/appointment-backend-dev-sqsPEHandler"
-            }
-          },
-          "SqsCLHandlerLogGroup": {
-            "Type": "AWS::Logs::LogGroup",
-            "Properties": {
-              "LogGroupName": "/aws/lambda/appointment-backend-dev-sqsCLHandler"
-            }
-          },
-          "HelloLogGroup": {
-            "Type": "AWS::Logs::LogGroup",
-            "Properties": {
-              "LogGroupName": "/aws/lambda/appointment-backend-dev-hello"
-            }
-          },
-          "AppointmentLogGroup": {
-            "Type": "AWS::Logs::LogGroup",
-            "Properties": {
-              "LogGroupName": "/aws/lambda/appointment-backend-dev-appointment"
-            }
-          },
-          "SwaggerLogGroup": {
-            "Type": "AWS::Logs::LogGroup",
-            "Properties": {
-              "LogGroupName": "/aws/lambda/appointment-backend-dev-swagger"
             }
           },
           "IamRoleLambdaExecution": {
@@ -198,6 +247,18 @@
                         ]
                       },
                       {
+                        "$ref": "$[\"service\"][\"provider\"][\"iam\"][\"role\"][\"statements\"][0]"
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iam\"][\"role\"][\"statements\"][1]"
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iam\"][\"role\"][\"statements\"][2]"
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iam\"][\"role\"][\"statements\"][3]"
+                      },
+                      {
                         "Effect": "Allow",
                         "Action": [
                           "sqs:ReceiveMessage",
@@ -207,31 +268,19 @@
                         "Resource": [
                           {
                             "Fn::GetAtt": [
-                              "SQSPE",
+                              "AppointmentQueuePE",
                               "Arn"
                             ]
                           },
                           {
                             "Fn::GetAtt": [
-                              "SQSCL",
+                              "AppointmentQueueCL",
                               "Arn"
                             ]
                           },
                           {
                             "Fn::GetAtt": [
-                              "ConformidadQueue",
-                              "Arn"
-                            ]
-                          },
-                          {
-                            "Fn::GetAtt": [
-                              "SQSPE",
-                              "Arn"
-                            ]
-                          },
-                          {
-                            "Fn::GetAtt": [
-                              "SQSCL",
+                              "AppointmentConfirmationQueue",
                               "Arn"
                             ]
                           }
@@ -257,6 +306,50 @@
               }
             }
           },
+          "AppointmentLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/appointment-backend/dev/1751266125893-2025-06-30T06:48:45.893Z/appointment-backend.zip"
+              },
+              "Handler": "dist/handlers/appointment.appointmentHandler",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "appointment-backend-dev-appointment",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "SNS_TOPIC_ARN": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
+                  "EVENT_BUS_NAME": "default",
+                  "DYNAMODB_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"DYNAMODB_TABLE\"]"
+                  },
+                  "RDS_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
+                  "RDS_USER": "admin",
+                  "RDS_PASSWORD": "Password123",
+                  "RDS_DATABASE_PE": "mysql-pe",
+                  "RDS_DATABASE_CL": "mysql-cl",
+                  "MYSQL_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
+                  "MYSQL_USER": "admin",
+                  "MYSQL_PASSWORD": "Password123",
+                  "MYSQL_CL": "mysql-cl",
+                  "MYSQL_PE": "mysql-pe"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "AppointmentLogGroup"
+            ]
+          },
           "AppointmentUnderscorepeLambdaFunction": {
             "Type": "AWS::Lambda::Function",
             "Properties": {
@@ -264,7 +357,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/appointment-backend/dev/1751263126370-2025-06-30T05:58:46.370Z/appointment-backend.zip"
+                "S3Key": "serverless/appointment-backend/dev/1751266125893-2025-06-30T06:48:45.893Z/appointment-backend.zip"
               },
               "Handler": "dist/handlers/appointment_pe.handler",
               "Runtime": "nodejs18.x",
@@ -274,12 +367,20 @@
               "Environment": {
                 "Variables": {
                   "SNS_TOPIC_ARN": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
+                  "EVENT_BUS_NAME": "default",
+                  "DYNAMODB_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"DYNAMODB_TABLE\"]"
+                  },
+                  "RDS_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
+                  "RDS_USER": "admin",
+                  "RDS_PASSWORD": "Password123",
+                  "RDS_DATABASE_PE": "mysql-pe",
+                  "RDS_DATABASE_CL": "mysql-cl",
                   "MYSQL_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
                   "MYSQL_USER": "admin",
                   "MYSQL_PASSWORD": "Password123",
                   "MYSQL_CL": "mysql-cl",
-                  "MYSQL_PE": "mysql-pe",
-                  "MYSQL_DB": "mysql-pe"
+                  "MYSQL_PE": "mysql-pe"
                 }
               },
               "Role": {
@@ -300,7 +401,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/appointment-backend/dev/1751263126370-2025-06-30T05:58:46.370Z/appointment-backend.zip"
+                "S3Key": "serverless/appointment-backend/dev/1751266125893-2025-06-30T06:48:45.893Z/appointment-backend.zip"
               },
               "Handler": "dist/handlers/appointment_cl.handler",
               "Runtime": "nodejs18.x",
@@ -310,12 +411,20 @@
               "Environment": {
                 "Variables": {
                   "SNS_TOPIC_ARN": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
+                  "EVENT_BUS_NAME": "default",
+                  "DYNAMODB_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"DYNAMODB_TABLE\"]"
+                  },
+                  "RDS_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
+                  "RDS_USER": "admin",
+                  "RDS_PASSWORD": "Password123",
+                  "RDS_DATABASE_PE": "mysql-pe",
+                  "RDS_DATABASE_CL": "mysql-cl",
                   "MYSQL_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
                   "MYSQL_USER": "admin",
                   "MYSQL_PASSWORD": "Password123",
                   "MYSQL_CL": "mysql-cl",
-                  "MYSQL_PE": "mysql-pe",
-                  "MYSQL_DB": "mysql-cl"
+                  "MYSQL_PE": "mysql-pe"
                 }
               },
               "Role": {
@@ -336,9 +445,9 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/appointment-backend/dev/1751263126370-2025-06-30T05:58:46.370Z/appointment-backend.zip"
+                "S3Key": "serverless/appointment-backend/dev/1751266125893-2025-06-30T06:48:45.893Z/appointment-backend.zip"
               },
-              "Handler": "dist/handlers/updateAppointmentStatus.updateAppointmentStatus",
+              "Handler": "dist/handlers/appointment_confirmation.processCompletionFromSQS",
               "Runtime": "nodejs18.x",
               "FunctionName": "appointment-backend-dev-updateAppointmentStatus",
               "MemorySize": 1024,
@@ -346,6 +455,15 @@
               "Environment": {
                 "Variables": {
                   "SNS_TOPIC_ARN": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
+                  "EVENT_BUS_NAME": "default",
+                  "DYNAMODB_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"DYNAMODB_TABLE\"]"
+                  },
+                  "RDS_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
+                  "RDS_USER": "admin",
+                  "RDS_PASSWORD": "Password123",
+                  "RDS_DATABASE_PE": "mysql-pe",
+                  "RDS_DATABASE_CL": "mysql-cl",
                   "MYSQL_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
                   "MYSQL_USER": "admin",
                   "MYSQL_PASSWORD": "Password123",
@@ -364,259 +482,44 @@
               "UpdateAppointmentStatusLogGroup"
             ]
           },
-          "SqsPEHandlerLambdaFunction": {
-            "Type": "AWS::Lambda::Function",
-            "Properties": {
-              "Code": {
-                "S3Bucket": {
-                  "Ref": "ServerlessDeploymentBucket"
-                },
-                "S3Key": "serverless/appointment-backend/dev/1751263126370-2025-06-30T05:58:46.370Z/appointment-backend.zip"
-              },
-              "Handler": "dist/handlers/sqsHandlers.sqsPEHandler",
-              "Runtime": "nodejs18.x",
-              "FunctionName": "appointment-backend-dev-sqsPEHandler",
-              "MemorySize": 1024,
-              "Timeout": 6,
-              "Environment": {
-                "Variables": {
-                  "SNS_TOPIC_ARN": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
-                  "MYSQL_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
-                  "MYSQL_USER": "admin",
-                  "MYSQL_PASSWORD": "Password123",
-                  "MYSQL_CL": "mysql-cl",
-                  "MYSQL_PE": "mysql-pe"
-                }
-              },
-              "Role": {
-                "Fn::GetAtt": [
-                  "IamRoleLambdaExecution",
-                  "Arn"
-                ]
-              }
-            },
-            "DependsOn": [
-              "SqsPEHandlerLogGroup"
-            ]
-          },
-          "SqsCLHandlerLambdaFunction": {
-            "Type": "AWS::Lambda::Function",
-            "Properties": {
-              "Code": {
-                "S3Bucket": {
-                  "Ref": "ServerlessDeploymentBucket"
-                },
-                "S3Key": "serverless/appointment-backend/dev/1751263126370-2025-06-30T05:58:46.370Z/appointment-backend.zip"
-              },
-              "Handler": "dist/handlers/sqsHandlers.sqsCLHandler",
-              "Runtime": "nodejs18.x",
-              "FunctionName": "appointment-backend-dev-sqsCLHandler",
-              "MemorySize": 1024,
-              "Timeout": 6,
-              "Environment": {
-                "Variables": {
-                  "SNS_TOPIC_ARN": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
-                  "MYSQL_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
-                  "MYSQL_USER": "admin",
-                  "MYSQL_PASSWORD": "Password123",
-                  "MYSQL_CL": "mysql-cl",
-                  "MYSQL_PE": "mysql-pe"
-                }
-              },
-              "Role": {
-                "Fn::GetAtt": [
-                  "IamRoleLambdaExecution",
-                  "Arn"
-                ]
-              }
-            },
-            "DependsOn": [
-              "SqsCLHandlerLogGroup"
-            ]
-          },
-          "HelloLambdaFunction": {
-            "Type": "AWS::Lambda::Function",
-            "Properties": {
-              "Code": {
-                "S3Bucket": {
-                  "Ref": "ServerlessDeploymentBucket"
-                },
-                "S3Key": "serverless/appointment-backend/dev/1751263126370-2025-06-30T05:58:46.370Z/appointment-backend.zip"
-              },
-              "Handler": "handler.hello",
-              "Runtime": "nodejs18.x",
-              "FunctionName": "appointment-backend-dev-hello",
-              "MemorySize": 1024,
-              "Timeout": 6,
-              "Environment": {
-                "Variables": {
-                  "SNS_TOPIC_ARN": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
-                  "MYSQL_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
-                  "MYSQL_USER": "admin",
-                  "MYSQL_PASSWORD": "Password123",
-                  "MYSQL_CL": "mysql-cl",
-                  "MYSQL_PE": "mysql-pe"
-                }
-              },
-              "Role": {
-                "Fn::GetAtt": [
-                  "IamRoleLambdaExecution",
-                  "Arn"
-                ]
-              }
-            },
-            "DependsOn": [
-              "HelloLogGroup"
-            ]
-          },
-          "AppointmentLambdaFunction": {
-            "Type": "AWS::Lambda::Function",
-            "Properties": {
-              "Code": {
-                "S3Bucket": {
-                  "Ref": "ServerlessDeploymentBucket"
-                },
-                "S3Key": "serverless/appointment-backend/dev/1751263126370-2025-06-30T05:58:46.370Z/appointment-backend.zip"
-              },
-              "Handler": "dist/handlers/appointment.appointmentHandler",
-              "Runtime": "nodejs18.x",
-              "FunctionName": "appointment-backend-dev-appointment",
-              "MemorySize": 1024,
-              "Timeout": 6,
-              "Environment": {
-                "Variables": {
-                  "SNS_TOPIC_ARN": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
-                  "MYSQL_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
-                  "MYSQL_USER": "admin",
-                  "MYSQL_PASSWORD": "Password123",
-                  "MYSQL_CL": "mysql-cl",
-                  "MYSQL_PE": "mysql-pe"
-                }
-              },
-              "Role": {
-                "Fn::GetAtt": [
-                  "IamRoleLambdaExecution",
-                  "Arn"
-                ]
-              }
-            },
-            "DependsOn": [
-              "AppointmentLogGroup"
-            ]
-          },
-          "SwaggerLambdaFunction": {
-            "Type": "AWS::Lambda::Function",
-            "Properties": {
-              "Code": {
-                "S3Bucket": {
-                  "Ref": "ServerlessDeploymentBucket"
-                },
-                "S3Key": "serverless/appointment-backend/dev/1751263126370-2025-06-30T05:58:46.370Z/appointment-backend.zip"
-              },
-              "Handler": "dist/handlers/swagger.swaggerHandler",
-              "Runtime": "nodejs18.x",
-              "FunctionName": "appointment-backend-dev-swagger",
-              "MemorySize": 1024,
-              "Timeout": 6,
-              "Environment": {
-                "Variables": {
-                  "SNS_TOPIC_ARN": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
-                  "MYSQL_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
-                  "MYSQL_USER": "admin",
-                  "MYSQL_PASSWORD": "Password123",
-                  "MYSQL_CL": "mysql-cl",
-                  "MYSQL_PE": "mysql-pe"
-                }
-              },
-              "Role": {
-                "Fn::GetAtt": [
-                  "IamRoleLambdaExecution",
-                  "Arn"
-                ]
-              }
-            },
-            "DependsOn": [
-              "SwaggerLogGroup"
-            ]
-          },
-          "AppointmentUnderscorepeLambdaVersionF3eS6vi55NRqzJaw1ckEfjvyf1SNE7eSX0nqJcZ5Kw": {
-            "Type": "AWS::Lambda::Version",
-            "DeletionPolicy": "Retain",
-            "Properties": {
-              "FunctionName": {
-                "Ref": "AppointmentUnderscorepeLambdaFunction"
-              },
-              "CodeSha256": "5aePjdpOomh1NQ/JrnM7FnRmo7zIG2BHw2CDIbkIXQQ="
-            }
-          },
-          "AppointmentUnderscoreclLambdaVersion5fRtPInapHTCTTKvPJw1W0u4V8tFe0a5bdsteUddRI": {
-            "Type": "AWS::Lambda::Version",
-            "DeletionPolicy": "Retain",
-            "Properties": {
-              "FunctionName": {
-                "Ref": "AppointmentUnderscoreclLambdaFunction"
-              },
-              "CodeSha256": "5aePjdpOomh1NQ/JrnM7FnRmo7zIG2BHw2CDIbkIXQQ="
-            }
-          },
-          "UpdateAppointmentStatusLambdaVersionOgNteSKfgEenvsBKTcy9B7OCLRJvNmPEoxGjr0ig": {
-            "Type": "AWS::Lambda::Version",
-            "DeletionPolicy": "Retain",
-            "Properties": {
-              "FunctionName": {
-                "Ref": "UpdateAppointmentStatusLambdaFunction"
-              },
-              "CodeSha256": "5aePjdpOomh1NQ/JrnM7FnRmo7zIG2BHw2CDIbkIXQQ="
-            }
-          },
-          "SqsPEHandlerLambdaVersiongMuz9eSE7tZWxotruw4rdfLFItn6m7Rff7HYOcej3M": {
-            "Type": "AWS::Lambda::Version",
-            "DeletionPolicy": "Retain",
-            "Properties": {
-              "FunctionName": {
-                "Ref": "SqsPEHandlerLambdaFunction"
-              },
-              "CodeSha256": "5aePjdpOomh1NQ/JrnM7FnRmo7zIG2BHw2CDIbkIXQQ="
-            }
-          },
-          "SqsCLHandlerLambdaVersionVkMMA3QdCUM0J4ZOF3DgJXwbAXc1j6tpuYHGYXjig": {
-            "Type": "AWS::Lambda::Version",
-            "DeletionPolicy": "Retain",
-            "Properties": {
-              "FunctionName": {
-                "Ref": "SqsCLHandlerLambdaFunction"
-              },
-              "CodeSha256": "5aePjdpOomh1NQ/JrnM7FnRmo7zIG2BHw2CDIbkIXQQ="
-            }
-          },
-          "HelloLambdaVersion9VwtlPYlPHwdfO13SeVjqqRdkuAagCKENoZanJoglM": {
-            "Type": "AWS::Lambda::Version",
-            "DeletionPolicy": "Retain",
-            "Properties": {
-              "FunctionName": {
-                "Ref": "HelloLambdaFunction"
-              },
-              "CodeSha256": "5aePjdpOomh1NQ/JrnM7FnRmo7zIG2BHw2CDIbkIXQQ="
-            }
-          },
-          "AppointmentLambdaVersionFYBt6ORyQExlj0uvfeLgWPsNlwH9f3BgB3CjM85Qw": {
+          "AppointmentLambdaVersionN0awep8WKCYsoFidwJWoTwbtSFu9UeHEBIpbE9D56Q": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "AppointmentLambdaFunction"
               },
-              "CodeSha256": "5aePjdpOomh1NQ/JrnM7FnRmo7zIG2BHw2CDIbkIXQQ="
+              "CodeSha256": "G/0C0AN/4BOvs+yiq677tb/N/7EovM+V7Jgfo9A1D8I="
             }
           },
-          "SwaggerLambdaVersionhb4K4guUH6Nrq61D1jJryvYQn4JaDRozYzjcKlmsow": {
+          "AppointmentUnderscorepeLambdaVersionnK3WldhxvsW1CNIPe7jFya91YYmJQ5ITveQK8ezwTs": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
-                "Ref": "SwaggerLambdaFunction"
+                "Ref": "AppointmentUnderscorepeLambdaFunction"
               },
-              "CodeSha256": "5aePjdpOomh1NQ/JrnM7FnRmo7zIG2BHw2CDIbkIXQQ="
+              "CodeSha256": "G/0C0AN/4BOvs+yiq677tb/N/7EovM+V7Jgfo9A1D8I="
+            }
+          },
+          "AppointmentUnderscoreclLambdaVersionccYv1zWs3RurW8cblHbbBm3dBUfWRLSjmLmJdpeOQ": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "AppointmentUnderscoreclLambdaFunction"
+              },
+              "CodeSha256": "G/0C0AN/4BOvs+yiq677tb/N/7EovM+V7Jgfo9A1D8I="
+            }
+          },
+          "UpdateAppointmentStatusLambdaVersionHmBDXqXy0X03mEO2bAs9XkNVfKIaye0gjxK0iqFTg": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "UpdateAppointmentStatusLambdaFunction"
+              },
+              "CodeSha256": "G/0C0AN/4BOvs+yiq677tb/N/7EovM+V7Jgfo9A1D8I="
             }
           },
           "ApiGatewayRestApi": {
@@ -629,21 +532,6 @@
                 ]
               },
               "Policy": ""
-            }
-          },
-          "ApiGatewayResourceHello": {
-            "Type": "AWS::ApiGateway::Resource",
-            "Properties": {
-              "ParentId": {
-                "Fn::GetAtt": [
-                  "ApiGatewayRestApi",
-                  "RootResourceId"
-                ]
-              },
-              "PathPart": "hello",
-              "RestApiId": {
-                "Ref": "ApiGatewayRestApi"
-              }
             }
           },
           "ApiGatewayResourceAppointments": {
@@ -661,66 +549,50 @@
               }
             }
           },
-          "ApiGatewayResourceSwagger": {
-            "Type": "AWS::ApiGateway::Resource",
+          "ApiGatewayMethodAppointmentsOptions": {
+            "Type": "AWS::ApiGateway::Method",
             "Properties": {
-              "ParentId": {
-                "Fn::GetAtt": [
-                  "ApiGatewayRestApi",
-                  "RootResourceId"
+              "AuthorizationType": "NONE",
+              "HttpMethod": "OPTIONS",
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseParameters": {
+                    "method.response.header.Access-Control-Allow-Origin": true,
+                    "method.response.header.Access-Control-Allow-Headers": true,
+                    "method.response.header.Access-Control-Allow-Methods": true
+                  },
+                  "ResponseModels": {}
+                }
+              ],
+              "RequestParameters": {},
+              "Integration": {
+                "Type": "MOCK",
+                "RequestTemplates": {
+                  "application/json": "{statusCode:200}"
+                },
+                "ContentHandling": "CONVERT_TO_TEXT",
+                "IntegrationResponses": [
+                  {
+                    "StatusCode": "200",
+                    "ResponseParameters": {
+                      "method.response.header.Access-Control-Allow-Origin": "'*'",
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                      "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,POST'"
+                    },
+                    "ResponseTemplates": {
+                      "application/json": ""
+                    }
+                  }
                 ]
               },
-              "PathPart": "swagger",
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceAppointments"
+              },
               "RestApiId": {
                 "Ref": "ApiGatewayRestApi"
               }
             }
-          },
-          "ApiGatewayMethodHelloGet": {
-            "Type": "AWS::ApiGateway::Method",
-            "Properties": {
-              "HttpMethod": "GET",
-              "RequestParameters": {},
-              "ResourceId": {
-                "Ref": "ApiGatewayResourceHello"
-              },
-              "RestApiId": {
-                "Ref": "ApiGatewayRestApi"
-              },
-              "ApiKeyRequired": false,
-              "AuthorizationType": "NONE",
-              "Integration": {
-                "IntegrationHttpMethod": "POST",
-                "Type": "AWS_PROXY",
-                "Uri": {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "arn:",
-                      {
-                        "Ref": "AWS::Partition"
-                      },
-                      ":apigateway:",
-                      {
-                        "Ref": "AWS::Region"
-                      },
-                      ":lambda:path/2015-03-31/functions/",
-                      {
-                        "Fn::GetAtt": [
-                          "HelloLambdaFunction",
-                          "Arn"
-                        ]
-                      },
-                      "/invocations"
-                    ]
-                  ]
-                }
-              },
-              "MethodResponses": []
-            },
-            "DependsOn": [
-              "HelloLambdaPermissionApiGateway"
-            ]
           },
           "ApiGatewayMethodAppointmentsPost": {
             "Type": "AWS::ApiGateway::Method",
@@ -768,13 +640,13 @@
               "AppointmentLambdaPermissionApiGateway"
             ]
           },
-          "ApiGatewayMethodSwaggerGet": {
+          "ApiGatewayMethodAppointmentsGet": {
             "Type": "AWS::ApiGateway::Method",
             "Properties": {
               "HttpMethod": "GET",
               "RequestParameters": {},
               "ResourceId": {
-                "Ref": "ApiGatewayResourceSwagger"
+                "Ref": "ApiGatewayResourceAppointments"
               },
               "RestApiId": {
                 "Ref": "ApiGatewayRestApi"
@@ -799,7 +671,7 @@
                       ":lambda:path/2015-03-31/functions/",
                       {
                         "Fn::GetAtt": [
-                          "SwaggerLambdaFunction",
+                          "AppointmentLambdaFunction",
                           "Arn"
                         ]
                       },
@@ -811,10 +683,10 @@
               "MethodResponses": []
             },
             "DependsOn": [
-              "SwaggerLambdaPermissionApiGateway"
+              "AppointmentLambdaPermissionApiGateway"
             ]
           },
-          "ApiGatewayDeployment1751263113848": {
+          "ApiGatewayDeployment1751266114178": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -823,47 +695,10 @@
               "StageName": "dev"
             },
             "DependsOn": [
-              "ApiGatewayMethodHelloGet",
+              "ApiGatewayMethodAppointmentsOptions",
               "ApiGatewayMethodAppointmentsPost",
-              "ApiGatewayMethodSwaggerGet"
+              "ApiGatewayMethodAppointmentsGet"
             ]
-          },
-          "HelloLambdaPermissionApiGateway": {
-            "Type": "AWS::Lambda::Permission",
-            "Properties": {
-              "FunctionName": {
-                "Fn::GetAtt": [
-                  "HelloLambdaFunction",
-                  "Arn"
-                ]
-              },
-              "Action": "lambda:InvokeFunction",
-              "Principal": "apigateway.amazonaws.com",
-              "SourceArn": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "arn:",
-                    {
-                      "Ref": "AWS::Partition"
-                    },
-                    ":execute-api:",
-                    {
-                      "Ref": "AWS::Region"
-                    },
-                    ":",
-                    {
-                      "Ref": "AWS::AccountId"
-                    },
-                    ":",
-                    {
-                      "Ref": "ApiGatewayRestApi"
-                    },
-                    "/*/*"
-                  ]
-                ]
-              }
-            }
           },
           "AppointmentLambdaPermissionApiGateway": {
             "Type": "AWS::Lambda::Permission",
@@ -902,53 +737,16 @@
               }
             }
           },
-          "SwaggerLambdaPermissionApiGateway": {
-            "Type": "AWS::Lambda::Permission",
-            "Properties": {
-              "FunctionName": {
-                "Fn::GetAtt": [
-                  "SwaggerLambdaFunction",
-                  "Arn"
-                ]
-              },
-              "Action": "lambda:InvokeFunction",
-              "Principal": "apigateway.amazonaws.com",
-              "SourceArn": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "arn:",
-                    {
-                      "Ref": "AWS::Partition"
-                    },
-                    ":execute-api:",
-                    {
-                      "Ref": "AWS::Region"
-                    },
-                    ":",
-                    {
-                      "Ref": "AWS::AccountId"
-                    },
-                    ":",
-                    {
-                      "Ref": "ApiGatewayRestApi"
-                    },
-                    "/*/*"
-                  ]
-                ]
-              }
-            }
-          },
-          "AppointmentUnderscorepeEventSourceMappingSQSSQSPE": {
+          "AppointmentUnderscorepeEventSourceMappingSQSAppointmentQueuePE": {
             "Type": "AWS::Lambda::EventSourceMapping",
             "DependsOn": [
               "IamRoleLambdaExecution"
             ],
             "Properties": {
-              "BatchSize": 10,
+              "BatchSize": 1,
               "EventSourceArn": {
                 "Fn::GetAtt": [
-                  "SQSPE",
+                  "AppointmentQueuePE",
                   "Arn"
                 ]
               },
@@ -961,16 +759,16 @@
               "Enabled": true
             }
           },
-          "AppointmentUnderscoreclEventSourceMappingSQSSQSCL": {
+          "AppointmentUnderscoreclEventSourceMappingSQSAppointmentQueueCL": {
             "Type": "AWS::Lambda::EventSourceMapping",
             "DependsOn": [
               "IamRoleLambdaExecution"
             ],
             "Properties": {
-              "BatchSize": 10,
+              "BatchSize": 1,
               "EventSourceArn": {
                 "Fn::GetAtt": [
-                  "SQSCL",
+                  "AppointmentQueueCL",
                   "Arn"
                 ]
               },
@@ -983,66 +781,22 @@
               "Enabled": true
             }
           },
-          "UpdateAppointmentStatusEventSourceMappingSQSConformidadQueue": {
+          "UpdateAppointmentStatusEventSourceMappingSQSAppointmentConfirmationQueue": {
             "Type": "AWS::Lambda::EventSourceMapping",
             "DependsOn": [
               "IamRoleLambdaExecution"
             ],
             "Properties": {
-              "BatchSize": 10,
+              "BatchSize": 1,
               "EventSourceArn": {
                 "Fn::GetAtt": [
-                  "ConformidadQueue",
+                  "AppointmentConfirmationQueue",
                   "Arn"
                 ]
               },
               "FunctionName": {
                 "Fn::GetAtt": [
                   "UpdateAppointmentStatusLambdaFunction",
-                  "Arn"
-                ]
-              },
-              "Enabled": true
-            }
-          },
-          "SqsPEHandlerEventSourceMappingSQSSQSPE": {
-            "Type": "AWS::Lambda::EventSourceMapping",
-            "DependsOn": [
-              "IamRoleLambdaExecution"
-            ],
-            "Properties": {
-              "BatchSize": 10,
-              "EventSourceArn": {
-                "Fn::GetAtt": [
-                  "SQSPE",
-                  "Arn"
-                ]
-              },
-              "FunctionName": {
-                "Fn::GetAtt": [
-                  "SqsPEHandlerLambdaFunction",
-                  "Arn"
-                ]
-              },
-              "Enabled": true
-            }
-          },
-          "SqsCLHandlerEventSourceMappingSQSSQSCL": {
-            "Type": "AWS::Lambda::EventSourceMapping",
-            "DependsOn": [
-              "IamRoleLambdaExecution"
-            ],
-            "Properties": {
-              "BatchSize": 10,
-              "EventSourceArn": {
-                "Fn::GetAtt": [
-                  "SQSCL",
-                  "Arn"
-                ]
-              },
-              "FunctionName": {
-                "Fn::GetAtt": [
-                  "SqsCLHandlerLambdaFunction",
                   "Arn"
                 ]
               },
@@ -1068,56 +822,40 @@
               "BillingMode": "PAY_PER_REQUEST"
             }
           },
-          "ConformidadQueue": {
+          "AppointmentsSNSTopic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+              "TopicName": "AppointmentsSNSTopic"
+            }
+          },
+          "AppointmentQueuePE": {
             "Type": "AWS::SQS::Queue",
             "Properties": {
-              "QueueName": "SQS_Conformidad"
+              "QueueName": "AppointmentQueuePE"
             }
           },
-          "EventBridgeToSQSRule": {
-            "Type": "AWS::Events::Rule",
-            "Properties": {
-              "EventPattern": {
-                "source": [
-                  "appointment"
-                ],
-                "detail-type": [
-                  "AppointmentCompleted"
-                ]
-              },
-              "Targets": [
-                {
-                  "Arn": {
-                    "Fn::GetAtt": [
-                      "ConformidadQueue",
-                      "Arn"
-                    ]
-                  },
-                  "Id": "TargetSQS"
-                }
-              ]
-            }
-          },
-          "SQSPE": {
+          "AppointmentQueueCL": {
             "Type": "AWS::SQS::Queue",
             "Properties": {
-              "QueueName": "SQS_PE"
+              "QueueName": "AppointmentQueueCL"
             }
           },
-          "SQSCL": {
+          "AppointmentConfirmationQueue": {
             "Type": "AWS::SQS::Queue",
             "Properties": {
-              "QueueName": "SQS_CL"
+              "QueueName": "AppointmentConfirmationQueue"
             }
           },
-          "SQSPESubscription": {
+          "SnsToSqsSubscriptionPE": {
             "Type": "AWS::SNS::Subscription",
             "Properties": {
-              "TopicArn": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
+              "TopicArn": {
+                "Ref": "AppointmentsSNSTopic"
+              },
               "Protocol": "sqs",
               "Endpoint": {
                 "Fn::GetAtt": [
-                  "SQSPE",
+                  "AppointmentQueuePE",
                   "Arn"
                 ]
               },
@@ -1128,14 +866,16 @@
               }
             }
           },
-          "SQSCLSubscription": {
+          "SnsToSqsSubscriptionCL": {
             "Type": "AWS::SNS::Subscription",
             "Properties": {
-              "TopicArn": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
+              "TopicArn": {
+                "Ref": "AppointmentsSNSTopic"
+              },
               "Protocol": "sqs",
               "Endpoint": {
                 "Fn::GetAtt": [
-                  "SQSCL",
+                  "AppointmentQueueCL",
                   "Arn"
                 ]
               },
@@ -1146,13 +886,75 @@
               }
             }
           },
-          "AppointmentConfirmationQueue": {
-            "Type": "AWS::SQS::Queue",
+          "SqsQueuePolicyPE": {
+            "Type": "AWS::SQS::QueuePolicy",
             "Properties": {
-              "QueueName": "AppointmentConfirmationQueue"
+              "Queues": [
+                {
+                  "Ref": "AppointmentQueuePE"
+                }
+              ],
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": "sns.amazonaws.com"
+                    },
+                    "Action": "SQS:SendMessage",
+                    "Resource": {
+                      "Fn::GetAtt": [
+                        "AppointmentQueuePE",
+                        "Arn"
+                      ]
+                    },
+                    "Condition": {
+                      "ArnEquals": {
+                        "aws:SourceArn": {
+                          "Ref": "AppointmentsSNSTopic"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
             }
           },
-          "EventBridgeToAppointmentConfirmationQueueRule": {
+          "SqsQueuePolicyCL": {
+            "Type": "AWS::SQS::QueuePolicy",
+            "Properties": {
+              "Queues": [
+                {
+                  "Ref": "AppointmentQueueCL"
+                }
+              ],
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": "sns.amazonaws.com"
+                    },
+                    "Action": "SQS:SendMessage",
+                    "Resource": {
+                      "Fn::GetAtt": [
+                        "AppointmentQueueCL",
+                        "Arn"
+                      ]
+                    },
+                    "Condition": {
+                      "ArnEquals": {
+                        "aws:SourceArn": {
+                          "Ref": "AppointmentsSNSTopic"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "EventBridgeCompletionRule": {
             "Type": "AWS::Events::Rule",
             "Properties": {
               "EventPattern": {
@@ -1171,90 +973,12 @@
                       "Arn"
                     ]
                   },
-                  "Id": "TargetAppointmentConfirmationQueue"
+                  "Id": "AppointmentConfirmationTarget"
                 }
               ]
             }
           },
-          "SqsPeQueue": {
-            "Type": "AWS::SQS::Queue",
-            "Properties": {
-              "QueueName": "SqsPeQueue"
-            }
-          },
-          "SqsClQueue": {
-            "Type": "AWS::SQS::Queue",
-            "Properties": {
-              "QueueName": "SqsClQueue"
-            }
-          },
-          "SqsPeQueuePolicy": {
-            "Type": "AWS::SQS::QueuePolicy",
-            "Properties": {
-              "Queues": [
-                {
-                  "Ref": "SqsPeQueue"
-                }
-              ],
-              "PolicyDocument": {
-                "Version": "2012-10-17",
-                "Statement": [
-                  {
-                    "Effect": "Allow",
-                    "Principal": "*",
-                    "Action": "sqs:SendMessage",
-                    "Resource": {
-                      "Fn::GetAtt": [
-                        "SqsPeQueue",
-                        "Arn"
-                      ]
-                    },
-                    "Condition": {
-                      "ArnEquals": {
-                        "aws:SourceArn": {
-                          "Ref": "AppoinmentsSNS"
-                        }
-                      }
-                    }
-                  }
-                ]
-              }
-            }
-          },
-          "SqsClQueuePolicy": {
-            "Type": "AWS::SQS::QueuePolicy",
-            "Properties": {
-              "Queues": [
-                {
-                  "Ref": "SqsClQueue"
-                }
-              ],
-              "PolicyDocument": {
-                "Version": "2012-10-17",
-                "Statement": [
-                  {
-                    "Effect": "Allow",
-                    "Principal": "*",
-                    "Action": "sqs:SendMessage",
-                    "Resource": {
-                      "Fn::GetAtt": [
-                        "SqsClQueue",
-                        "Arn"
-                      ]
-                    },
-                    "Condition": {
-                      "ArnEquals": {
-                        "aws:SourceArn": {
-                          "Ref": "AppoinmentsSNS"
-                        }
-                      }
-                    }
-                  }
-                ]
-              }
-            }
-          },
-          "AppointmentConfirmationQueuePolicy": {
+          "EventBridgeSqsPolicy": {
             "Type": "AWS::SQS::QueuePolicy",
             "Properties": {
               "Queues": [
@@ -1263,12 +987,13 @@
                 }
               ],
               "PolicyDocument": {
-                "Version": "2012-10-17",
                 "Statement": [
                   {
                     "Effect": "Allow",
-                    "Principal": "*",
-                    "Action": "sqs:SendMessage",
+                    "Principal": {
+                      "Service": "events.amazonaws.com"
+                    },
+                    "Action": "SQS:SendMessage",
                     "Resource": {
                       "Fn::GetAtt": [
                         "AppointmentConfirmationQueue",
@@ -1278,51 +1003,14 @@
                     "Condition": {
                       "ArnEquals": {
                         "aws:SourceArn": {
-                          "Ref": "EventBridgeToAppointmentConfirmationQueueRule"
+                          "Fn::GetAtt": [
+                            "EventBridgeCompletionRule",
+                            "Arn"
+                          ]
                         }
                       }
                     }
                   }
-                ]
-              }
-            }
-          },
-          "SqsPeSubscription": {
-            "Type": "AWS::SNS::Subscription",
-            "Properties": {
-              "TopicArn": {
-                "Ref": "AppoinmentsSNS"
-              },
-              "Protocol": "sqs",
-              "Endpoint": {
-                "Fn::GetAtt": [
-                  "SqsPeQueue",
-                  "Arn"
-                ]
-              },
-              "FilterPolicy": {
-                "countryISO": [
-                  "PE"
-                ]
-              }
-            }
-          },
-          "SqsClSubscription": {
-            "Type": "AWS::SNS::Subscription",
-            "Properties": {
-              "TopicArn": {
-                "Ref": "AppoinmentsSNS"
-              },
-              "Protocol": "sqs",
-              "Endpoint": {
-                "Fn::GetAtt": [
-                  "SqsClQueue",
-                  "Arn"
-                ]
-              },
-              "FilterPolicy": {
-                "countryISO": [
-                  "CL"
                 ]
               }
             }
@@ -1337,10 +1025,19 @@
               "Name": "sls-appointment-backend-dev-ServerlessDeploymentBucketName"
             }
           },
+          "AppointmentLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "AppointmentLambdaVersionN0awep8WKCYsoFidwJWoTwbtSFu9UeHEBIpbE9D56Q"
+            },
+            "Export": {
+              "Name": "sls-appointment-backend-dev-AppointmentLambdaFunctionQualifiedArn"
+            }
+          },
           "AppointmentUnderscorepeLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AppointmentUnderscorepeLambdaVersionF3eS6vi55NRqzJaw1ckEfjvyf1SNE7eSX0nqJcZ5Kw"
+              "Ref": "AppointmentUnderscorepeLambdaVersionnK3WldhxvsW1CNIPe7jFya91YYmJQ5ITveQK8ezwTs"
             },
             "Export": {
               "Name": "sls-appointment-backend-dev-AppointmentUnderscorepeLambdaFunctionQualifiedArn"
@@ -1349,7 +1046,7 @@
           "AppointmentUnderscoreclLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AppointmentUnderscoreclLambdaVersion5fRtPInapHTCTTKvPJw1W0u4V8tFe0a5bdsteUddRI"
+              "Ref": "AppointmentUnderscoreclLambdaVersionccYv1zWs3RurW8cblHbbBm3dBUfWRLSjmLmJdpeOQ"
             },
             "Export": {
               "Name": "sls-appointment-backend-dev-AppointmentUnderscoreclLambdaFunctionQualifiedArn"
@@ -1358,55 +1055,10 @@
           "UpdateAppointmentStatusLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "UpdateAppointmentStatusLambdaVersionOgNteSKfgEenvsBKTcy9B7OCLRJvNmPEoxGjr0ig"
+              "Ref": "UpdateAppointmentStatusLambdaVersionHmBDXqXy0X03mEO2bAs9XkNVfKIaye0gjxK0iqFTg"
             },
             "Export": {
               "Name": "sls-appointment-backend-dev-UpdateAppointmentStatusLambdaFunctionQualifiedArn"
-            }
-          },
-          "SqsPEHandlerLambdaFunctionQualifiedArn": {
-            "Description": "Current Lambda function version",
-            "Value": {
-              "Ref": "SqsPEHandlerLambdaVersiongMuz9eSE7tZWxotruw4rdfLFItn6m7Rff7HYOcej3M"
-            },
-            "Export": {
-              "Name": "sls-appointment-backend-dev-SqsPEHandlerLambdaFunctionQualifiedArn"
-            }
-          },
-          "SqsCLHandlerLambdaFunctionQualifiedArn": {
-            "Description": "Current Lambda function version",
-            "Value": {
-              "Ref": "SqsCLHandlerLambdaVersionVkMMA3QdCUM0J4ZOF3DgJXwbAXc1j6tpuYHGYXjig"
-            },
-            "Export": {
-              "Name": "sls-appointment-backend-dev-SqsCLHandlerLambdaFunctionQualifiedArn"
-            }
-          },
-          "HelloLambdaFunctionQualifiedArn": {
-            "Description": "Current Lambda function version",
-            "Value": {
-              "Ref": "HelloLambdaVersion9VwtlPYlPHwdfO13SeVjqqRdkuAagCKENoZanJoglM"
-            },
-            "Export": {
-              "Name": "sls-appointment-backend-dev-HelloLambdaFunctionQualifiedArn"
-            }
-          },
-          "AppointmentLambdaFunctionQualifiedArn": {
-            "Description": "Current Lambda function version",
-            "Value": {
-              "Ref": "AppointmentLambdaVersionFYBt6ORyQExlj0uvfeLgWPsNlwH9f3BgB3CjM85Qw"
-            },
-            "Export": {
-              "Name": "sls-appointment-backend-dev-AppointmentLambdaFunctionQualifiedArn"
-            }
-          },
-          "SwaggerLambdaFunctionQualifiedArn": {
-            "Description": "Current Lambda function version",
-            "Value": {
-              "Ref": "SwaggerLambdaVersionhb4K4guUH6Nrq61D1jJryvYQn4JaDRozYzjcKlmsow"
-            },
-            "Export": {
-              "Name": "sls-appointment-backend-dev-SwaggerLambdaFunctionQualifiedArn"
             }
           },
           "ServiceEndpoint": {
@@ -1521,138 +1173,23 @@
       },
       "vpc": {}
     },
+    "custom": {
+      "env": {
+        "db": {
+          "host": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
+          "user": "admin",
+          "password": "Password123",
+          "pe_db": "mysql-pe",
+          "cl_db": "mysql-cl"
+        }
+      }
+    },
     "plugins": [
       "serverless-dotenv-plugin",
       "serverless-offline"
     ],
     "pluginsData": {},
     "functions": {
-      "appointment_pe": {
-        "handler": "dist/handlers/appointment_pe.handler",
-        "environment": {
-          "MYSQL_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
-          "MYSQL_USER": "admin",
-          "MYSQL_PASSWORD": "Password123",
-          "MYSQL_DB": "mysql-pe"
-        },
-        "events": [
-          {
-            "sqs": {
-              "arn": {
-                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"IamRoleLambdaExecution\"][\"Properties\"][\"Policies\"][0][\"PolicyDocument\"][\"Statement\"][2][\"Resource\"][0]"
-              }
-            }
-          }
-        ],
-        "name": "appointment-backend-dev-appointment_pe",
-        "package": {},
-        "memory": 1024,
-        "timeout": 6,
-        "runtime": "nodejs18.x",
-        "vpc": {},
-        "versionLogicalId": "AppointmentUnderscorepeLambdaVersionF3eS6vi55NRqzJaw1ckEfjvyf1SNE7eSX0nqJcZ5Kw"
-      },
-      "appointment_cl": {
-        "handler": "dist/handlers/appointment_cl.handler",
-        "environment": {
-          "MYSQL_HOST": "mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com",
-          "MYSQL_USER": "admin",
-          "MYSQL_PASSWORD": "Password123",
-          "MYSQL_DB": "mysql-cl"
-        },
-        "events": [
-          {
-            "sqs": {
-              "arn": {
-                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"IamRoleLambdaExecution\"][\"Properties\"][\"Policies\"][0][\"PolicyDocument\"][\"Statement\"][2][\"Resource\"][1]"
-              }
-            }
-          }
-        ],
-        "name": "appointment-backend-dev-appointment_cl",
-        "package": {},
-        "memory": 1024,
-        "timeout": 6,
-        "runtime": "nodejs18.x",
-        "vpc": {},
-        "versionLogicalId": "AppointmentUnderscoreclLambdaVersion5fRtPInapHTCTTKvPJw1W0u4V8tFe0a5bdsteUddRI"
-      },
-      "updateAppointmentStatus": {
-        "handler": "dist/handlers/updateAppointmentStatus.updateAppointmentStatus",
-        "events": [
-          {
-            "sqs": {
-              "arn": {
-                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"IamRoleLambdaExecution\"][\"Properties\"][\"Policies\"][0][\"PolicyDocument\"][\"Statement\"][2][\"Resource\"][2]"
-              }
-            }
-          }
-        ],
-        "name": "appointment-backend-dev-updateAppointmentStatus",
-        "package": {},
-        "memory": 1024,
-        "timeout": 6,
-        "runtime": "nodejs18.x",
-        "vpc": {},
-        "versionLogicalId": "UpdateAppointmentStatusLambdaVersionOgNteSKfgEenvsBKTcy9B7OCLRJvNmPEoxGjr0ig"
-      },
-      "sqsPEHandler": {
-        "handler": "dist/handlers/sqsHandlers.sqsPEHandler",
-        "events": [
-          {
-            "sqs": {
-              "arn": {
-                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"IamRoleLambdaExecution\"][\"Properties\"][\"Policies\"][0][\"PolicyDocument\"][\"Statement\"][2][\"Resource\"][3]"
-              }
-            }
-          }
-        ],
-        "name": "appointment-backend-dev-sqsPEHandler",
-        "package": {},
-        "memory": 1024,
-        "timeout": 6,
-        "runtime": "nodejs18.x",
-        "vpc": {},
-        "versionLogicalId": "SqsPEHandlerLambdaVersiongMuz9eSE7tZWxotruw4rdfLFItn6m7Rff7HYOcej3M"
-      },
-      "sqsCLHandler": {
-        "handler": "dist/handlers/sqsHandlers.sqsCLHandler",
-        "events": [
-          {
-            "sqs": {
-              "arn": {
-                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"IamRoleLambdaExecution\"][\"Properties\"][\"Policies\"][0][\"PolicyDocument\"][\"Statement\"][2][\"Resource\"][4]"
-              }
-            }
-          }
-        ],
-        "name": "appointment-backend-dev-sqsCLHandler",
-        "package": {},
-        "memory": 1024,
-        "timeout": 6,
-        "runtime": "nodejs18.x",
-        "vpc": {},
-        "versionLogicalId": "SqsCLHandlerLambdaVersionVkMMA3QdCUM0J4ZOF3DgJXwbAXc1j6tpuYHGYXjig"
-      },
-      "hello": {
-        "handler": "handler.hello",
-        "events": [
-          {
-            "http": {
-              "path": "hello",
-              "method": "get",
-              "integration": "AWS_PROXY"
-            }
-          }
-        ],
-        "name": "appointment-backend-dev-hello",
-        "package": {},
-        "memory": 1024,
-        "timeout": 6,
-        "runtime": "nodejs18.x",
-        "vpc": {},
-        "versionLogicalId": "HelloLambdaVersion9VwtlPYlPHwdfO13SeVjqqRdkuAagCKENoZanJoglM"
-      },
       "appointment": {
         "handler": "dist/handlers/appointment.appointmentHandler",
         "events": [
@@ -1660,6 +1197,47 @@
             "http": {
               "path": "appointments",
               "method": "post",
+              "cors": {
+                "origin": "*",
+                "methods": [
+                  "OPTIONS",
+                  "POST"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent",
+                  "X-Amzn-Trace-Id"
+                ],
+                "allowCredentials": false
+              },
+              "integration": "AWS_PROXY"
+            }
+          },
+          {
+            "http": {
+              "path": "appointments",
+              "method": "get",
+              "cors": {
+                "origin": "*",
+                "methods": [
+                  "OPTIONS",
+                  "GET"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent",
+                  "X-Amzn-Trace-Id"
+                ],
+                "allowCredentials": false
+              },
               "integration": "AWS_PROXY"
             }
           }
@@ -1670,26 +1248,67 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "AppointmentLambdaVersionFYBt6ORyQExlj0uvfeLgWPsNlwH9f3BgB3CjM85Qw"
+        "versionLogicalId": "AppointmentLambdaVersionN0awep8WKCYsoFidwJWoTwbtSFu9UeHEBIpbE9D56Q"
       },
-      "swagger": {
-        "handler": "dist/handlers/swagger.swaggerHandler",
+      "appointment_pe": {
+        "handler": "dist/handlers/appointment_pe.handler",
         "events": [
           {
-            "http": {
-              "path": "swagger",
-              "method": "get",
-              "integration": "AWS_PROXY"
+            "sqs": {
+              "arn": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"IamRoleLambdaExecution\"][\"Properties\"][\"Policies\"][0][\"PolicyDocument\"][\"Statement\"][6][\"Resource\"][0]"
+              },
+              "batchSize": 1
             }
           }
         ],
-        "name": "appointment-backend-dev-swagger",
+        "name": "appointment-backend-dev-appointment_pe",
         "package": {},
         "memory": 1024,
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "SwaggerLambdaVersionhb4K4guUH6Nrq61D1jJryvYQn4JaDRozYzjcKlmsow"
+        "versionLogicalId": "AppointmentUnderscorepeLambdaVersionnK3WldhxvsW1CNIPe7jFya91YYmJQ5ITveQK8ezwTs"
+      },
+      "appointment_cl": {
+        "handler": "dist/handlers/appointment_cl.handler",
+        "events": [
+          {
+            "sqs": {
+              "arn": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"IamRoleLambdaExecution\"][\"Properties\"][\"Policies\"][0][\"PolicyDocument\"][\"Statement\"][6][\"Resource\"][1]"
+              },
+              "batchSize": 1
+            }
+          }
+        ],
+        "name": "appointment-backend-dev-appointment_cl",
+        "package": {},
+        "memory": 1024,
+        "timeout": 6,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "AppointmentUnderscoreclLambdaVersionccYv1zWs3RurW8cblHbbBm3dBUfWRLSjmLmJdpeOQ"
+      },
+      "updateAppointmentStatus": {
+        "handler": "dist/handlers/appointment_confirmation.processCompletionFromSQS",
+        "events": [
+          {
+            "sqs": {
+              "arn": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"IamRoleLambdaExecution\"][\"Properties\"][\"Policies\"][0][\"PolicyDocument\"][\"Statement\"][6][\"Resource\"][2]"
+              },
+              "batchSize": 1
+            }
+          }
+        ],
+        "name": "appointment-backend-dev-updateAppointmentStatus",
+        "package": {},
+        "memory": 1024,
+        "timeout": 6,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "UpdateAppointmentStatusLambdaVersionHmBDXqXy0X03mEO2bAs9XkNVfKIaye0gjxK0iqFTg"
       }
     },
     "resources": {
@@ -1713,56 +1332,40 @@
             "BillingMode": "PAY_PER_REQUEST"
           }
         },
-        "ConformidadQueue": {
+        "AppointmentsSNSTopic": {
+          "Type": "AWS::SNS::Topic",
+          "Properties": {
+            "TopicName": "AppointmentsSNSTopic"
+          }
+        },
+        "AppointmentQueuePE": {
           "Type": "AWS::SQS::Queue",
           "Properties": {
-            "QueueName": "SQS_Conformidad"
+            "QueueName": "AppointmentQueuePE"
           }
         },
-        "EventBridgeToSQSRule": {
-          "Type": "AWS::Events::Rule",
-          "Properties": {
-            "EventPattern": {
-              "source": [
-                "appointment"
-              ],
-              "detail-type": [
-                "AppointmentCompleted"
-              ]
-            },
-            "Targets": [
-              {
-                "Arn": {
-                  "Fn::GetAtt": [
-                    "ConformidadQueue",
-                    "Arn"
-                  ]
-                },
-                "Id": "TargetSQS"
-              }
-            ]
-          }
-        },
-        "SQSPE": {
+        "AppointmentQueueCL": {
           "Type": "AWS::SQS::Queue",
           "Properties": {
-            "QueueName": "SQS_PE"
+            "QueueName": "AppointmentQueueCL"
           }
         },
-        "SQSCL": {
+        "AppointmentConfirmationQueue": {
           "Type": "AWS::SQS::Queue",
           "Properties": {
-            "QueueName": "SQS_CL"
+            "QueueName": "AppointmentConfirmationQueue"
           }
         },
-        "SQSPESubscription": {
+        "SnsToSqsSubscriptionPE": {
           "Type": "AWS::SNS::Subscription",
           "Properties": {
-            "TopicArn": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
+            "TopicArn": {
+              "Ref": "AppointmentsSNSTopic"
+            },
             "Protocol": "sqs",
             "Endpoint": {
               "Fn::GetAtt": [
-                "SQSPE",
+                "AppointmentQueuePE",
                 "Arn"
               ]
             },
@@ -1773,14 +1376,16 @@
             }
           }
         },
-        "SQSCLSubscription": {
+        "SnsToSqsSubscriptionCL": {
           "Type": "AWS::SNS::Subscription",
           "Properties": {
-            "TopicArn": "arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS",
+            "TopicArn": {
+              "Ref": "AppointmentsSNSTopic"
+            },
             "Protocol": "sqs",
             "Endpoint": {
               "Fn::GetAtt": [
-                "SQSCL",
+                "AppointmentQueueCL",
                 "Arn"
               ]
             },
@@ -1791,13 +1396,75 @@
             }
           }
         },
-        "AppointmentConfirmationQueue": {
-          "Type": "AWS::SQS::Queue",
+        "SqsQueuePolicyPE": {
+          "Type": "AWS::SQS::QueuePolicy",
           "Properties": {
-            "QueueName": "AppointmentConfirmationQueue"
+            "Queues": [
+              {
+                "Ref": "AppointmentQueuePE"
+              }
+            ],
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Principal": {
+                    "Service": "sns.amazonaws.com"
+                  },
+                  "Action": "SQS:SendMessage",
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "AppointmentQueuePE",
+                      "Arn"
+                    ]
+                  },
+                  "Condition": {
+                    "ArnEquals": {
+                      "aws:SourceArn": {
+                        "Ref": "AppointmentsSNSTopic"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
           }
         },
-        "EventBridgeToAppointmentConfirmationQueueRule": {
+        "SqsQueuePolicyCL": {
+          "Type": "AWS::SQS::QueuePolicy",
+          "Properties": {
+            "Queues": [
+              {
+                "Ref": "AppointmentQueueCL"
+              }
+            ],
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Principal": {
+                    "Service": "sns.amazonaws.com"
+                  },
+                  "Action": "SQS:SendMessage",
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "AppointmentQueueCL",
+                      "Arn"
+                    ]
+                  },
+                  "Condition": {
+                    "ArnEquals": {
+                      "aws:SourceArn": {
+                        "Ref": "AppointmentsSNSTopic"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "EventBridgeCompletionRule": {
           "Type": "AWS::Events::Rule",
           "Properties": {
             "EventPattern": {
@@ -1816,90 +1483,12 @@
                     "Arn"
                   ]
                 },
-                "Id": "TargetAppointmentConfirmationQueue"
+                "Id": "AppointmentConfirmationTarget"
               }
             ]
           }
         },
-        "SqsPeQueue": {
-          "Type": "AWS::SQS::Queue",
-          "Properties": {
-            "QueueName": "SqsPeQueue"
-          }
-        },
-        "SqsClQueue": {
-          "Type": "AWS::SQS::Queue",
-          "Properties": {
-            "QueueName": "SqsClQueue"
-          }
-        },
-        "SqsPeQueuePolicy": {
-          "Type": "AWS::SQS::QueuePolicy",
-          "Properties": {
-            "Queues": [
-              {
-                "Ref": "SqsPeQueue"
-              }
-            ],
-            "PolicyDocument": {
-              "Version": "2012-10-17",
-              "Statement": [
-                {
-                  "Effect": "Allow",
-                  "Principal": "*",
-                  "Action": "sqs:SendMessage",
-                  "Resource": {
-                    "Fn::GetAtt": [
-                      "SqsPeQueue",
-                      "Arn"
-                    ]
-                  },
-                  "Condition": {
-                    "ArnEquals": {
-                      "aws:SourceArn": {
-                        "Ref": "AppoinmentsSNS"
-                      }
-                    }
-                  }
-                }
-              ]
-            }
-          }
-        },
-        "SqsClQueuePolicy": {
-          "Type": "AWS::SQS::QueuePolicy",
-          "Properties": {
-            "Queues": [
-              {
-                "Ref": "SqsClQueue"
-              }
-            ],
-            "PolicyDocument": {
-              "Version": "2012-10-17",
-              "Statement": [
-                {
-                  "Effect": "Allow",
-                  "Principal": "*",
-                  "Action": "sqs:SendMessage",
-                  "Resource": {
-                    "Fn::GetAtt": [
-                      "SqsClQueue",
-                      "Arn"
-                    ]
-                  },
-                  "Condition": {
-                    "ArnEquals": {
-                      "aws:SourceArn": {
-                        "Ref": "AppoinmentsSNS"
-                      }
-                    }
-                  }
-                }
-              ]
-            }
-          }
-        },
-        "AppointmentConfirmationQueuePolicy": {
+        "EventBridgeSqsPolicy": {
           "Type": "AWS::SQS::QueuePolicy",
           "Properties": {
             "Queues": [
@@ -1908,12 +1497,13 @@
               }
             ],
             "PolicyDocument": {
-              "Version": "2012-10-17",
               "Statement": [
                 {
                   "Effect": "Allow",
-                  "Principal": "*",
-                  "Action": "sqs:SendMessage",
+                  "Principal": {
+                    "Service": "events.amazonaws.com"
+                  },
+                  "Action": "SQS:SendMessage",
                   "Resource": {
                     "Fn::GetAtt": [
                       "AppointmentConfirmationQueue",
@@ -1923,51 +1513,14 @@
                   "Condition": {
                     "ArnEquals": {
                       "aws:SourceArn": {
-                        "Ref": "EventBridgeToAppointmentConfirmationQueueRule"
+                        "Fn::GetAtt": [
+                          "EventBridgeCompletionRule",
+                          "Arn"
+                        ]
                       }
                     }
                   }
                 }
-              ]
-            }
-          }
-        },
-        "SqsPeSubscription": {
-          "Type": "AWS::SNS::Subscription",
-          "Properties": {
-            "TopicArn": {
-              "Ref": "AppoinmentsSNS"
-            },
-            "Protocol": "sqs",
-            "Endpoint": {
-              "Fn::GetAtt": [
-                "SqsPeQueue",
-                "Arn"
-              ]
-            },
-            "FilterPolicy": {
-              "countryISO": [
-                "PE"
-              ]
-            }
-          }
-        },
-        "SqsClSubscription": {
-          "Type": "AWS::SNS::Subscription",
-          "Properties": {
-            "TopicArn": {
-              "Ref": "AppoinmentsSNS"
-            },
-            "Protocol": "sqs",
-            "Endpoint": {
-              "Fn::GetAtt": [
-                "SqsClQueue",
-                "Arn"
-              ]
-            },
-            "FilterPolicy": {
-              "countryISO": [
-                "CL"
               ]
             }
           }
@@ -1980,14 +1533,17 @@
     "initialServerlessConfig": {
       "service": "appointment-backend",
       "frameworkVersion": "3",
+      "plugins": {
+        "$ref": "$[\"service\"][\"plugins\"]"
+      },
+      "custom": {
+        "$ref": "$[\"service\"][\"custom\"]"
+      },
       "provider": {
         "$ref": "$[\"service\"][\"provider\"]"
       },
       "functions": {
         "$ref": "$[\"service\"][\"functions\"]"
-      },
-      "plugins": {
-        "$ref": "$[\"service\"][\"plugins\"]"
       },
       "resources": {
         "$ref": "$[\"service\"][\"resources\"]"
@@ -1998,7 +1554,7 @@
     "artifact": "C:\\Users\\mafer\\Documents\\rimac\\appointment-backend\\.serverless\\appointment-backend.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/appointment-backend/dev/1751263126370-2025-06-30T05:58:46.370Z",
+    "artifactDirectoryName": "serverless/appointment-backend/dev/1751266125893-2025-06-30T06:48:45.893Z",
     "artifact": "appointment-backend.zip"
   }
 }

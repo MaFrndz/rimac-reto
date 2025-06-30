@@ -2,84 +2,87 @@ service: appointment-backend
 
 frameworkVersion: '3'
 
+plugins:
+  - serverless-dotenv-plugin
+  - serverless-offline
+
+custom:
+  env: ${file(env.js)}
+
 provider:
   name: aws
   runtime: nodejs18.x
   region: us-east-1
+  environment:
+    SNS_TOPIC_ARN: !Ref AppointmentsSNSTopic
+    EVENT_BUS_NAME: default
+    DYNAMODB_TABLE: !Ref AppointmentsTable
+    # Reference the custom variables, which are resolved after .env is loaded
+    RDS_HOST: ${self:custom.env.db.host}
+    RDS_USER: ${self:custom.env.db.user}
+    RDS_PASSWORD: ${self:custom.env.db.password}
+    RDS_DATABASE_PE: ${self:custom.env.db.pe_db}
+    RDS_DATABASE_CL: ${self:custom.env.db.cl_db}
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "dynamodb:Query"
+            - "dynamodb:PutItem"
+            - "dynamodb:UpdateItem"
+          Resource: !GetAtt AppointmentsTable.Arn
+        - Effect: "Allow"
+          Action:
+            - "sns:Publish"
+          Resource: !Ref AppointmentsSNSTopic
+        - Effect: "Allow"
+          Action:
+            - "events:PutEvents"
+          Resource: "*"
+        - Effect: "Allow"
+          Action:
+            - "sqs:ReceiveMessage"
+            - "sqs:DeleteMessage"
+            - "sqs:GetQueueAttributes"
+          Resource:
+            - !GetAtt AppointmentQueuePE.Arn
+            - !GetAtt AppointmentQueueCL.Arn
+            - !GetAtt AppointmentConfirmationQueue.Arn
 
 functions:
-  appointment_pe:
-    handler: dist/handlers/appointment_pe.handler
-    environment:
-      MYSQL_HOST: mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com
-      MYSQL_USER: admin
-      MYSQL_PASSWORD: Password123
-      MYSQL_DB: mysql-pe
-    events:
-      - sqs:
-          arn:
-            Fn::GetAtt:
-              - SQSPE
-              - Arn
-
-  appointment_cl:
-    handler: dist/handlers/appointment_cl.handler
-    environment:
-      MYSQL_HOST: mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com
-      MYSQL_USER: admin
-      MYSQL_PASSWORD: Password123
-      MYSQL_DB: mysql-cl
-    events:
-      - sqs:
-          arn:
-            Fn::GetAtt:
-              - SQSCL
-              - Arn
-  updateAppointmentStatus:
-    handler: dist/handlers/updateAppointmentStatus.updateAppointmentStatus
-    events:
-      - sqs:
-          arn:
-            Fn::GetAtt:
-              - ConformidadQueue
-              - Arn
-  sqsPEHandler:
-    handler: dist/handlers/sqsHandlers.sqsPEHandler
-    events:
-      - sqs:
-          arn:
-            Fn::GetAtt:
-              - SQSPE
-              - Arn
-  sqsCLHandler:
-    handler: dist/handlers/sqsHandlers.sqsCLHandler
-    events:
-      - sqs:
-          arn:
-            Fn::GetAtt:
-              - SQSCL
-              - Arn
-  hello:
-    handler: handler.hello
-    events:
-      - http:
-          path: hello
-          method: get
   appointment:
     handler: dist/handlers/appointment.appointmentHandler
     events:
       - http:
           path: appointments
           method: post
-  swagger:
-    handler: dist/handlers/swagger.swaggerHandler
-    events:
+          cors: true
       - http:
-          path: swagger
+          path: appointments
           method: get
+          cors: true
 
-plugins:
-  - serverless-dotenv-plugin
-  - serverless-offline
+  appointment_pe:
+    handler: dist/handlers/appointment_pe.handler
+    events:
+      - sqs:
+          arn: !GetAtt AppointmentQueuePE.Arn
+          batchSize: 1
+
+  appointment_cl:
+    handler: dist/handlers/appointment_cl.handler
+    events:
+      - sqs:
+          arn: !GetAtt AppointmentQueueCL.Arn
+          batchSize: 1
+
+  updateAppointmentStatus:
+    handler: dist/handlers/appointment_confirmation.processCompletionFromSQS
+    events:
+      - sqs:
+          arn: !GetAtt AppointmentConfirmationQueue.Arn
+          batchSize: 1
+
 resources:
   - ${file(resources.yml)}

@@ -1,4 +1,5 @@
 Resources:
+  # DynamoDB Table for Appointments
   AppointmentsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -10,58 +11,89 @@ Resources:
         - AttributeName: id
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
-  ConformidadQueue:
+
+  # SNS Topic for new appointments
+  AppointmentsSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: AppointmentsSNSTopic
+
+  # SQS Queue for Peru Appointments
+  AppointmentQueuePE:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: SQS_Conformidad
-  EventBridgeToSQSRule:
-    Type: AWS::Events::Rule
-    Properties:
-      EventPattern:
-        source:
-          - "appointment"
-        detail-type:
-          - "AppointmentCompleted"
-      Targets:
-        - Arn: !GetAtt ConformidadQueue.Arn
-          Id: "TargetSQS"
-  SQSPE:
+      QueueName: AppointmentQueuePE
+
+  # SQS Queue for Chile Appointments
+  AppointmentQueueCL:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: SQS_PE
-  SQSCL:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: SQS_CL
-  SQSPESubscription:
-    Type: AWS::SNS::Subscription
-    Properties:
-      TopicArn: arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS
-      Protocol: sqs
-      Endpoint:
-        Fn::GetAtt:
-          - SQSPE
-          - Arn
-      FilterPolicy:
-        countryISO:
-          - "PE"
-  SQSCLSubscription:
-    Type: AWS::SNS::Subscription
-    Properties:
-      TopicArn: arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS
-      Protocol: sqs
-      Endpoint:
-        Fn::GetAtt:
-          - SQSCL
-          - Arn
-      FilterPolicy:
-        countryISO:
-          - "CL"
+      QueueName: AppointmentQueueCL
+
+  # SQS Queue for Appointment Status Updates (from EventBridge)
   AppointmentConfirmationQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: AppointmentConfirmationQueue
-  EventBridgeToAppointmentConfirmationQueueRule:
+
+  # SNS Subscription for PE Queue
+  SnsToSqsSubscriptionPE:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AppointmentsSNSTopic
+      Protocol: sqs
+      Endpoint: !GetAtt AppointmentQueuePE.Arn
+      FilterPolicy:
+        countryISO:
+          - "PE"
+
+  # SNS Subscription for CL Queue
+  SnsToSqsSubscriptionCL:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AppointmentsSNSTopic
+      Protocol: sqs
+      Endpoint: !GetAtt AppointmentQueueCL.Arn
+      FilterPolicy:
+        countryISO:
+          - "CL"
+
+  # SQS Policy for PE Queue to allow SNS
+  SqsQueuePolicyPE:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AppointmentQueuePE
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: SQS:SendMessage
+            Resource: !GetAtt AppointmentQueuePE.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref AppointmentsSNSTopic
+
+  # SQS Policy for CL Queue to allow SNS
+  SqsQueuePolicyCL:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AppointmentQueueCL
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: SQS:SendMessage
+            Resource: !GetAtt AppointmentQueueCL.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref AppointmentsSNSTopic
+
+  # EventBridge Rule to catch completion events
+  EventBridgeCompletionRule:
     Type: AWS::Events::Rule
     Properties:
       EventPattern:
@@ -71,75 +103,21 @@ Resources:
           - "AppointmentCompleted"
       Targets:
         - Arn: !GetAtt AppointmentConfirmationQueue.Arn
-          Id: "TargetAppointmentConfirmationQueue"
-  SqsPeQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: SqsPeQueue
-  SqsClQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: SqsClQueue
-  SqsPeQueuePolicy:
-    Type: AWS::SQS::QueuePolicy
-    Properties:
-      Queues:
-        - !Ref SqsPeQueue
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal: "*"
-            Action: "sqs:SendMessage"
-            Resource: !GetAtt SqsPeQueue.Arn
-            Condition:
-              ArnEquals:
-                aws:SourceArn: !Ref AppoinmentsSNS
-  SqsClQueuePolicy:
-    Type: AWS::SQS::QueuePolicy
-    Properties:
-      Queues:
-        - !Ref SqsClQueue
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal: "*"
-            Action: "sqs:SendMessage"
-            Resource: !GetAtt SqsClQueue.Arn
-            Condition:
-              ArnEquals:
-                aws:SourceArn: !Ref AppoinmentsSNS
-  AppointmentConfirmationQueuePolicy:
+          Id: "AppointmentConfirmationTarget"
+
+  # SQS Policy for Confirmation Queue to allow EventBridge
+  EventBridgeSqsPolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
       Queues:
         - !Ref AppointmentConfirmationQueue
       PolicyDocument:
-        Version: "2012-10-17"
         Statement:
           - Effect: Allow
-            Principal: "*"
-            Action: "sqs:SendMessage"
+            Principal:
+              Service: events.amazonaws.com
+            Action: SQS:SendMessage
             Resource: !GetAtt AppointmentConfirmationQueue.Arn
             Condition:
               ArnEquals:
-                aws:SourceArn: !Ref EventBridgeToAppointmentConfirmationQueueRule
-  SqsPeSubscription:
-    Type: AWS::SNS::Subscription
-    Properties:
-      TopicArn: !Ref AppoinmentsSNS
-      Protocol: sqs
-      Endpoint: !GetAtt SqsPeQueue.Arn
-      FilterPolicy:
-        countryISO:
-          - "PE"
-  SqsClSubscription:
-    Type: AWS::SNS::Subscription
-    Properties:
-      TopicArn: !Ref AppoinmentsSNS
-      Protocol: sqs
-      Endpoint: !GetAtt SqsClQueue.Arn
-      FilterPolicy:
-        countryISO:
-          - "CL"
+                aws:SourceArn: !GetAtt EventBridgeCompletionRule.Arn
