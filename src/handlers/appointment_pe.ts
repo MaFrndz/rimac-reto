@@ -6,13 +6,18 @@ import { publishAppointmentCompleted } from "../infrastructure/eventbridge/Event
  
 
 export const handler: SQSHandler = async (event: SQSEvent) => {
+  console.log("Step 5: Processing appointment from SQS_PE");
   for (const record of event.Records) {
     const snsMessage = JSON.parse(record.body);
     const appointment: AppointmentRequest = JSON.parse(snsMessage.Message);
+    console.log("Step 6: Parsed appointment object", appointment);
+
     try {
       await saveAppointmentRDS(appointment);
+      console.log("Step 7: Saved appointment to MySQL");
 
       await publishAppointmentCompleted(appointment);
+      console.log("Step 8: Published appointment completion to EventBridge");
     } catch (error) {
       console.error("Error processing PE appointment:", error);
       throw error;

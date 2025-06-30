@@ -141,3 +141,18 @@ resources:
         FilterPolicy:
           countryISO:
             - "CL"
+    AppointmentConfirmationQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: AppointmentConfirmationQueue
+    EventBridgeToAppointmentConfirmationQueueRule:
+      Type: AWS::Events::Rule
+      Properties:
+        EventPattern:
+          source:
+            - "appointment"
+          detail-type:
+            - "AppointmentCompleted"
+        Targets:
+          - Arn: !GetAtt AppointmentConfirmationQueue.Arn
+            Id: "TargetAppointmentConfirmationQueue"

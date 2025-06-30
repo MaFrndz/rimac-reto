@@ -51,6 +51,7 @@ const handlePostAppointment = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   try {
+    console.log("Step 1: Received POST request to create appointment");
     if (!event.body) {
       return createResponse(400, {
         error: ERROR.MISSING_BODY,
@@ -72,10 +73,13 @@ const handlePostAppointment = async (
     }
 
     const appointment = createAppointment(body);
+    console.log("Step 2: Created appointment object", appointment);
 
     await saveDynamoDBAppointment(appointment);
+    console.log("Step 3: Saved appointment to DynamoDB");
 
     await publishSNSAppointment(appointment);
+    console.log("Step 4: Published appointment to SNS");
 
     return createResponse(202, {
       message: MESSAGES.APPOINTMENT_SCHEDULED,
