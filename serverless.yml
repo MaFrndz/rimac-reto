@@ -82,7 +82,7 @@ functions:
           arn: !GetAtt AppointmentQueueCL.Arn
           batchSize: 1
 
-  updateAppointmentStatus:
+  appointment_confirmation:
     handler: dist/handlers/appointment_confirmation.processCompletionFromSQS
     events:
       - sqs:
