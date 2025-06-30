@@ -7,19 +7,19 @@ import { AppointmentRequest } from "../../domain/models/types";
  */
 const pools: Record<string, Pool> = {
   PE: mysql.createPool({
-    host: process.env.RDS_HOST,
-    user: process.env.RDS_USER,
-    password: process.env.RDS_PASSWORD,
-    database: process.env.RDS_DATABASE_PE,
+    host: process.env.MYSQL_HOST,
+    user: process.env.MYSQL_USER,
+    password: process.env.MYSQL_PASSWORD,
+    database: process.env.MYSQL_PE,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
   }),
   CL: mysql.createPool({
-    host: process.env.RDS_HOST,
-    user: process.env.RDS_USER,
-    password: process.env.RDS_PASSWORD,
-    database: process.env.RDS_DATABASE_CL,
+    host: process.env.MYSQL_HOST,
+    user: process.env.MYSQL_USER,
+    password: process.env.MYSQL_PASSWORD,
+    database: process.env.MYSQL_CL,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
@@ -41,9 +41,10 @@ export async function saveAppointmentRDS(
     throw new Error(`No pool defined for country: ${appointment.countryISO}`);
   }
 
-  const sql = `INSERT INTO appointments (id, insuredId, scheduleId, centerId, specialtyId, medicId, appointmentDate, countryISO, status, createdAt)
+  const sql = `INSERT INTO appointments (id, insured_id, schedule_id, center_id, specialty_id, medic_id, appointment_date, country_iso, status, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
+               console.log("SQL Query:", appointment);
   const values = [
     appointment.id,
     appointment.insuredId,

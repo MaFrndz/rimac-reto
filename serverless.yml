@@ -9,7 +9,7 @@ provider:
 
 functions:
   appointment_pe:
-    handler: dist/handlers/appointmentCountry.appointment_pe
+    handler: dist/handlers/appointment_pe.handler
     environment:
       MYSQL_HOST: mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com
       MYSQL_USER: admin
@@ -23,7 +23,7 @@ functions:
               - Arn
 
   appointment_cl:
-    handler: dist/handlers/appointmentCountry.appointment_cl
+    handler: dist/handlers/appointment_cl.handler
     environment:
       MYSQL_HOST: mysql-stancia.ckdqc08a6quw.us-east-1.rds.amazonaws.com
       MYSQL_USER: admin
@@ -82,77 +82,4 @@ plugins:
   - serverless-dotenv-plugin
   - serverless-offline
 resources:
-  Resources:
-    AppointmentsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: appointments
-        AttributeDefinitions:
-          - AttributeName: id
-            AttributeType: S
-        KeySchema:
-          - AttributeName: id
-            KeyType: HASH
-        BillingMode: PAY_PER_REQUEST
-    ConformidadQueue:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: SQS_Conformidad
-    EventBridgeToSQSRule:
-      Type: AWS::Events::Rule
-      Properties:
-        EventPattern:
-          source:
-            - "appointment"
-          detail-type:
-            - "AppointmentCompleted"
-        Targets:
-          - Arn: !GetAtt ConformidadQueue.Arn
-            Id: "TargetSQS"
-    SQSPE:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: SQS_PE
-    SQSCL:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: SQS_CL
-    SQSPESubscription:
-      Type: AWS::SNS::Subscription
-      Properties:
-        TopicArn: arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS
-        Protocol: sqs
-        Endpoint:
-          Fn::GetAtt:
-            - SQSPE
-            - Arn
-        FilterPolicy:
-          countryISO:
-            - "PE"
-    SQSCLSubscription:
-      Type: AWS::SNS::Subscription
-      Properties:
-        TopicArn: arn:aws:sns:us-east-1:393157401981:AppoinmentsSNS
-        Protocol: sqs
-        Endpoint:
-          Fn::GetAtt:
-            - SQSCL
-            - Arn
-        FilterPolicy:
-          countryISO:
-            - "CL"
-    AppointmentConfirmationQueue:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: AppointmentConfirmationQueue
-    EventBridgeToAppointmentConfirmationQueueRule:
-      Type: AWS::Events::Rule
-      Properties:
-        EventPattern:
-          source:
-            - "appointment"
-          detail-type:
-            - "AppointmentCompleted"
-        Targets:
-          - Arn: !GetAtt AppointmentConfirmationQueue.Arn
-            Id: "TargetAppointmentConfirmationQueue"
+  - ${file(resources.yml)}

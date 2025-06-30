@@ -1,0 +1,20 @@
+{
+  "Records": [
+    {
+      "messageId": "19dd0b57-b21e-4ac1-bd88-01bbb068cb78",
+      "receiptHandle": "MessageReceiptHandle",
+      "body": "{\"Type\":\"Notification\",\"MessageId\":\"a1b2c3d4-5678-90ef-ghij-klmnopqrstuv\",\"TopicArn\":\"arn:aws:sns:us-east-1:123456789012:appointments-topic\",\"Message\":\"{\\\"id\\\":\\\"d1e9b8f0-9b1a-4e6f-a2a4-8b6b1e2c9d0f\\\",\\\"insuredId\\\":\\\"00123\\\",\\\"countryISO\\\":\\\"PE\\\",\\\"status\\\":\\\"PENDING\\\",\\\"createdAt\\\":\\\"2025-06-30T18:45:00.000Z\\\",\\\"schedule\\\":{\\\"scheduleId\\\":100,\\\"centerId\\\":4,\\\"specialtyId\\\":3,\\\"medicId\\\":4,\\\"date\\\":\\\"2024-09-30\\\"}}\",\"Timestamp\":\"2025-06-30T18:45:01.123Z\"}",
+      "attributes": {
+        "ApproximateReceiveCount": "1",
+        "SentTimestamp": "1678886400000",
+        "SenderId": "AROAIASK7VT64EXAMPLE",
+        "ApproximateFirstReceiveTimestamp": "1678886400001"
+      },
+      "messageAttributes": {},
+      "md5OfBody": "0d8f3733941446a44488a15853935c6c",
+      "eventSource": "aws:sqs",
+      "eventSourceARN": "arn:aws:sqs:us-east-1:123456789012:SQS_PE",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

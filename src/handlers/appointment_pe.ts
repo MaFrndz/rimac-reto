@@ -10,6 +10,7 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
   for (const record of event.Records) {
     const snsMessage = JSON.parse(record.body);
     const appointment: AppointmentRequest = JSON.parse(snsMessage.Message);
+    console.log("Step 6: snsMessage", snsMessage);
     console.log("Step 6: Parsed appointment object", appointment);
 
     try {
