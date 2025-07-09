@@ -11,13 +11,7 @@ import { ERROR, MESSAGES } from "../utils/constants";
 import { getDynamoAppointmentsByInsuredId, saveDynamoDBAppointment } from "../infrastructure/dynamodb/AppointmentRepository";
 import { publishSNSAppointment } from "../infrastructure/sns/NotificationPublisher";
 
-/**
- * Lambda handler for managing appointment-related HTTP requests.
- * Supports POST (create appointment) and GET (list appointments).
- *
- * @param event - API Gateway event object
- * @returns Response with appropriate status and body
- */
+
 export const appointmentHandler: APIGatewayProxyHandler = async (event) => {
   try {
     switch (event.httpMethod) {
@@ -40,18 +34,12 @@ export const appointmentHandler: APIGatewayProxyHandler = async (event) => {
   }
 };
 
-/**
- * Handles POST /appointments.
- * Validates the request body and schedules a new appointment.
- *
- * @param event - API Gateway event containing the appointment data in the body
- * @returns 202 on success, 400/422 on validation errors, 500 on server error
- */
+
 const handlePostAppointment = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   try {
-    console.log("Step 1: Received POST request to create appointment");
+    console.log("Paso 1: Solicitud POST recibida para crear cita");
     if (!event.body) {
       return createResponse(400, {
         error: ERROR.MISSING_BODY,
@@ -73,13 +61,13 @@ const handlePostAppointment = async (
     }
 
     const appointment = createAppointment(body);
-    console.log("Step 2: Created appointment object", appointment);
+    console.log("Paso 2: Objeto de cita creado", appointment);
 
     await saveDynamoDBAppointment(appointment);
-    console.log("Step 3: Saved appointment to DynamoDB");
+    console.log("Paso 3: Cita guardada en DynamoDB");
 
     await publishSNSAppointment(appointment);
-    console.log("Step 4: Published appointment to SNS");
+    console.log("Paso 4: Cita publicada en SNS");
 
     return createResponse(202, {
       message: MESSAGES.APPOINTMENT_SCHEDULED,
@@ -94,18 +82,12 @@ const handlePostAppointment = async (
   }
 };
 
-/**
- * Handles GET /appointments/get.
- * Returns the list of appointments for the specified insuredId.
- *
- * @param event - API Gateway event with queryStringParameters containing insuredId
- * @returns 200 with appointments, 400 if insuredId missing, or 500 on server error
- */
+
 const handleGetAppointments = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   const insuredId = event.queryStringParameters?.insuredId;
-  console.log("Step 1: Received GET request to list appointments for insuredId:", insuredId);
+  console.log("Paso 1: Solicitud GET recibida para listar citas del insuredId:", insuredId);
   if (!insuredId) {
     return createResponse(400, {
       error: MESSAGES.MISSING_REQUIRED_FIELDS,

@@ -11,7 +11,7 @@ export async function publishAppointmentCompleted(
   const EVENT_BUS_NAME = process.env.EVENT_BUS_NAME!;
 
   // Log EventBridge publish details
-  console.log("Step 8: Publishing appointment completed event to EventBridge", {
+  console.log("Paso 8: Publicando evento de cita completada en EventBridge", {
     eventBusName: EVENT_BUS_NAME,
     detail: appointment,
   });

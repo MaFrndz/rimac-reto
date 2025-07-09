@@ -38,7 +38,7 @@ export async function saveAppointmentRDS(
   const pool = pools[appointment.countryISO];
 
   if (!pool) {
-    throw new Error(`No pool defined for country: ${appointment.countryISO}`);
+    throw new Error(`Pais no definido: ${appointment.countryISO}`);
   }
 
   const sql = `INSERT INTO appointments (id, insured_id, schedule_id, center_id, specialty_id, medic_id, appointment_date, country_iso, status, created_at)

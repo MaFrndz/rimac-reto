@@ -4,18 +4,18 @@ import { AppointmentRequest } from "../domain/models/types";
 import { publishAppointmentCompleted } from "../infrastructure/eventbridge/EventPublisher";
 
 export const handler: SQSHandler = async (event: SQSEvent) => {
-  console.log("Step 5: Processing appointment from SQS_CL");
+  console.log("Paso 5: Procesando cita desde SQS_CL");
   for (const record of event.Records) {
     const snsMessage = JSON.parse(record.body);
     const appointment: AppointmentRequest = JSON.parse(snsMessage.Message);
-    console.log("Step 6: Parsed appointment object", appointment);
+    console.log("Paso 6: Objeto de cita parseado", appointment);
 
     try {
       await saveAppointmentRDS(appointment);
-      console.log("Step 7: Saved appointment to MySQL");
+      console.log("Paso 7: Cita guardada en MySQL");
 
       await publishAppointmentCompleted(appointment);
-      console.log("Step 8: Published appointment completion to EventBridge");
+      console.log("Paso 8: Publicada finalización de cita en EventBridge");
     } catch (error) {
       console.error("Error processing CL appointment:", error);
       throw error;

@@ -20,12 +20,12 @@ export async function publishSNSAppointment(appointment: AppointmentRequest) {
       },
     },
   };
-  console.log("Publishing to SNS with params:", params);
+  console.log("Publicando en SNS con parámetros:", params);
   try {
     await sns.send(new PublishCommand(params));
-    console.log("Successfully published to SNS");
+    console.log("Publicado exitosamente en SNS");
   } catch (error) {
-    console.error("Error publishing to SNS:", error);
+    console.error("Error publicar en SNS:", error);
     throw error;
   }
   return true;

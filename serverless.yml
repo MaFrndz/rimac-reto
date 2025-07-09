@@ -72,6 +72,8 @@ functions:
           path: appointments
           method: get
           cors: true
+    memorySize: 128
+    timeout: 10
 
   appointment_pe:
     handler: dist/handlers/appointment_pe.handler
@@ -79,6 +81,8 @@ functions:
       - sqs:
           arn: !GetAtt AppointmentQueuePE.Arn
           batchSize: 1
+    timeout: 10
+    memorySize: 128
 
   appointment_cl:
     handler: dist/handlers/appointment_cl.handler
@@ -86,6 +90,8 @@ functions:
       - sqs:
           arn: !GetAtt AppointmentQueueCL.Arn
           batchSize: 1
+    timeout: 10
+    memorySize: 128
 
   appointment_confirmation:
     handler: dist/handlers/appointment_confirmation.processCompletionFromSQS
@@ -93,6 +99,8 @@ functions:
       - sqs:
           arn: !GetAtt AppointmentConfirmationQueue.Arn
           batchSize: 1
+    timeout: 10
+    memorySize: 128
 
 resources:
   - ${file(resources.yml)}
